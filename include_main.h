@@ -1,5 +1,15 @@
-#include "colors/colors.h"
+#ifndef INCLUDE_STDIO
+    #define INCLUDE_STDIO
+    #include <stdio.h>
+#endif
 
-#include "semaphore/semaphore.h"
+#ifndef INCLUDE_STDLIB
+    #define INCLUDE_STDLIB
+    #include <stdlib.h>
+#endif
 
-#include "string/string.h"
+
+#ifndef INCLUDE_COLORS
+    #define INCLUDE_COLORS
+    #include "colors/colors.h"
+#endif
