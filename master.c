@@ -31,7 +31,7 @@ void stampaStatistiche(map_cell *mappa[], int righeMappa, int colonneMappa, int 
     char *strTmp;
 
     for(i=0; i<righeMappa; i++){
-        for(k=0;k<colonneMappa;k++){
+        for(j=0;j<colonneMappa;j++){
 
                 if((&mappa[i][j])->cellType == ROAD){
                     sprintf(strTmp, " %d ", (&mappa[i][j])->taxiOnThisCell );
