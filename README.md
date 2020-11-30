@@ -29,3 +29,14 @@ TaxicabGame
 ============== CONTROL ====================
 
 programma che mette roba dentro la coda di messaggi per nuove richieste
+
+
+
+
+============= APPUNTI NICK =================
+
+generazione random di: source e buchi
+default mappa: strada
+modifica dopo creazione
+
+
