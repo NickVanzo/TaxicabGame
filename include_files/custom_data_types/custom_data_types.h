@@ -33,4 +33,5 @@ typedef struct{
     int availableSpace; /*spazio disponibile di taxi nella cella. è una variabile di tipo semaforo*/
     int taxiOnThisCell; /*numero intero che indica il numero di taxi presenti nella cella*/
     time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
+    int availableForHoles;
 } map_cell;
