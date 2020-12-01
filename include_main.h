@@ -27,8 +27,10 @@
 
 #ifndef DEFINES
     #define DEFINES
-    #define MAX_MAP_ROWS 1000
-    #define MAX_MAP_COLS 1000
+
+    /*dimensione della mappa del mondo*/
+    #define SO_WIDTH 20 /*righe*/
+    #define SO_HEIGHT 10 /*colonne*/
 
 #endif
 
