@@ -312,9 +312,7 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
     sprintf(stats[11], "%s", " | \e[41m  \e[49m -> Red color shows SO_TOP_CELLS");
     
     for(k=0;k<2;k++, printedStats++){
-        for(i=0;i<SO_WIDTH+2;i++){
-            colorPrintf("       ", GRAY, GRAY);
-        }
+        for(i=0;i<SO_WIDTH+2;i++)  colorPrintf("       ", GRAY, GRAY);
         printf("%s\n", stats[printedStats]);
     }
     
@@ -326,11 +324,10 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
                     if(finalPrint == TRUE){
                         taxiOnTheCell = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
                         sprintf(strTmp, " %-5d ",  taxiOnTheCell);
-                        if(taxiOnTheCell > SO_TOP_CELLS){
-                            colorPrintf(strTmp, BLACK, YELLOW);
-                        }else{
-                            colorPrintf(strTmp, BLACK, WHITE);
-                        }
+
+                        if(taxiOnTheCell > SO_TOP_CELLS)  colorPrintf(strTmp, BLACK, YELLOW);
+                        else colorPrintf(strTmp, BLACK, WHITE);
+                        
                    }else{
                        if((&mappa[i][j])->cellType == ROAD){
                             sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
@@ -338,9 +335,8 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
                         }else if((&mappa[i][j])->cellType == SOURCE){
                             sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
                             colorPrintf(strTmp, BLACK, MAGENTA);
-                        }else{
-                            colorPrintf( "       ", BLACK, BLACK);
-                        }
+                        }else colorPrintf( "       ", BLACK, BLACK);
+                        
                    }    
                 }else if((&mappa[i][j])->cellType == SOURCE){
                     sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
@@ -361,9 +357,8 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
 
     /*stampo bordo inferiore*/
     for(k=0;k<2;k++){
-        for(i=0;i<SO_WIDTH+2;i++){
-            colorPrintf("       ", GRAY, GRAY);
-        }
+        for(i=0;i<SO_WIDTH+2;i++) colorPrintf("       ", GRAY, GRAY);
+
         /*stampo statistica a financo banda grigia*/
         if(printedStats <numberOfStats){
             printf("%s\n", stats[printedStats]);
