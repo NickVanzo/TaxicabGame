@@ -77,7 +77,8 @@ int main(int argc, char *argv[]){
     /*avvio setup della simulazione*/
     setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, &SO_TOP_CELLS, &SO_TIMEOUT, &SO_DURATION ,argc, argv);
    
-
+    /*per debug solo DA TOGLIERE*/
+    for(i=0;i<6;i++) mapStats[i] = 0;
     
 
     /*creo lo spazio della matrice nello heap--DA CAMBIARE A SHMMEM*/
@@ -291,58 +292,44 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
 
 void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS){
-    int i,j,k, printedStats = 0, taxiOnTheCell;
-    char *stats[] = {
-        " | Number of successfoul rides: ",
-        " | Number of unsuccessfoul rides: ",
-        " | Number of aborted rides: ",
-        " | Cumulative longest driving taxi: ",
-        " | Cumulative farthest driving taxi: ",
-        " | Taxi with most succesfoul rides: ",
-        "",
-        " | Colours Legend",
-        " | \e[40m  \e[49m -> Black color is a blocked zone",
-        " | \e[45m  \e[49m -> Magenta colour is a source point",
-        " | \e[107m  \e[49m -> White colour is a road with light traffic",
-        " | \e[42m  \e[43m  \e[41m  \e[49m -> G/Y/R color shows a light to heavy traffic"
-    };
-
+    int i,j,k, printedStats=0, taxiOnTheCell;
+    char stats[12][128];
+    const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
     char *strTmp = (char *)malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
 
-
-    /*stampèo bordo superiore*/
-    for(i=0;i<SO_WIDTH+2;i++){
-        colorPrintf("       ", GRAY, GRAY);
+    /*creo le strincge da stampare*/
+    sprintf(stats[0], "%s", " |\e[33m Statistics for running simulation \e[39m");
+    sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
+    sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
+    sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
+    sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
+    sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
+    sprintf(stats[7], "%s", " |\e[33m Colours legend: \e[39m");
+    sprintf(stats[8], "%s", " | \e[40m  \e[49m -> Black color is a blocked zone");
+    sprintf(stats[9], "%s", " | \e[45m  \e[49m -> Magenta colour is a source point");
+    sprintf(stats[10], "%s", " | \e[107m  \e[49m -> White colour is a road with light traffic");
+    sprintf(stats[11], "%s", " | \e[41m  \e[49m -> Red color shows SO_TOP_CELLS");
+    
+    for(k=0;k<2;k++, printedStats++){
+        for(i=0;i<SO_WIDTH+2;i++){
+            colorPrintf("       ", GRAY, GRAY);
+        }
+        printf("%s\n", stats[printedStats]);
     }
-    printf("\n");
-    for(i=0;i<SO_WIDTH+2;i++){
-        colorPrintf("       ", GRAY, GRAY);
-    }
-    /*stampo titolo statistiche*/
-    printf(" | ");
-    colorPrintf("Statistics for running simulation:", YELLOW, DEFAULT);
-
-    printf("\n");
-
-
     
     for(i=0; i<SO_HEIGHT; i++){
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
         for(j=0;j<SO_WIDTH;j++){
-
                 if((&mappa[i][j])->cellType == ROAD){
                     /*se sono alla stampa finale allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                     if(finalPrint == TRUE){
                         taxiOnTheCell = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
                         sprintf(strTmp, " %-5d ",  taxiOnTheCell);
-                        if(taxiOnTheCell<3){
-                            colorPrintf(strTmp, BLACK, WHITE);
-                        }else if(taxiOnTheCell >=3 && taxiOnTheCell <5){
-                            colorPrintf(strTmp, BLACK, GREEN);
-                        }else if(taxiOnTheCell >=5 && taxiOnTheCell <7){
+                        if(taxiOnTheCell > SO_TOP_CELLS){
                             colorPrintf(strTmp, BLACK, YELLOW);
                         }else{
-                            colorPrintf(strTmp, WHITE, RED);
+                            colorPrintf(strTmp, BLACK, WHITE);
                         }
                    }else{
                        if((&mappa[i][j])->cellType == ROAD){
@@ -354,62 +341,48 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
                         }else{
                             colorPrintf( "       ", BLACK, BLACK);
                         }
-                   }
-                    
+                   }    
                 }else if((&mappa[i][j])->cellType == SOURCE){
                     sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
                     colorPrintf(strTmp, BLACK, MAGENTA);
                 }else{
                     colorPrintf( "       ", BLACK, BLACK);
-                }
-                
+                }     
         }
-         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
-         if(i<12){
-             if(i<6)printf("%s%d\n", stats[i], statistiche[i]); /*se ho stampato meno di 6 stat allora stampo la statistica i e il valore della sua stat*/
-             else printf("%s\n", stats[i]);
-             printedStats++;
-         } 
-         else printf("\n");
-    }
 
+         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
+         if(i<numberOfStats){
+             printf("%s\n", stats[printedStats]);
+             printedStats++;
+         }else{
+             printf("\n");
+         } 
+    }
 
     /*stampo bordo inferiore*/
-    for(i=0;i<SO_WIDTH+2;i++){
-        colorPrintf("       ", GRAY, GRAY);
+    for(k=0;k<2;k++){
+        for(i=0;i<SO_WIDTH+2;i++){
+            colorPrintf("       ", GRAY, GRAY);
+        }
+        /*stampo statistica a financo banda grigia*/
+        if(printedStats <numberOfStats){
+            printf("%s\n", stats[printedStats]);
+            printedStats++;
+        }else{
+            printf("\n");
+        }
     }
-
-    /*stampo statistica a financo banda grigia*/
-    if(printedStats <12){
-        if(printedStats<6)printf("%s%d", stats[printedStats], statistiche[printedStats]); /*se ho stampato meno di 6 stat allora stampo la statistica i e il valore della sua stat*/
-        else printf("%s", stats[printedStats]);
-        printedStats++;
-    }
-    printf("\n");
-
-
-    for(i=0;i<SO_WIDTH+2;i++){
-        colorPrintf("       ", GRAY, GRAY);
-    }
-    /*stampo statistica a financo banda grigia*/
-    if(printedStats <12){
-        if(printedStats<6)printf("%s%d", stats[printedStats], statistiche[printedStats]); /*se ho stampato meno di 6 stat allora stampo la statistica i e il valore della sua stat*/
-        else printf("%s", stats[printedStats]);
-        printedStats++;
-    }
-    printf("\n");
-
-
-
-    /*controllo che ho stampato tutti gli stats*/
+    
+    /*controllo che ho stampato tutti gli stats e se non lo ho fatto stampo quelli che mancano allineandoli agli altri sotto*/
     if(printedStats < 12){
-        for(i=printedStats; i<12;i++){
-            for(j=0;j<SO_WIDTH; j++) printf("       "); /*mi allineo alla fine*/
-            if(i<6)printf("%s%d\n", stats[i], statistiche[i]); /*se ho stampato meno di 6 stat allora stampo la statistica i e il valore della sua stat*/
-            else printf("%s\n", stats[i]);
+        for(i=printedStats;i<numberOfStats;i++){
+            for(j=0;j<7*(SO_WIDTH+2);j++) printf(" ");
+            printf("%s\n", stats[i]);
         }
     }
 }
+
+
 
 /*
 funzione che controla se la mappa ha zone inaccessibili
