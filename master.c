@@ -31,7 +31,7 @@ void spawnBlocks(map_cell **mappa, int numeroBuchi,int i, int j, int SO_HOLES);
 
 int main(int argc, char *argv[]){
     
-    int i,j,numeroBuchi; /*variabili iteratrici nei cicli*/
+    int i,j,numeroBuchi; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX; /*parametri letti o inseriti a compilazione*/
 
     map_cell **mappa;
@@ -122,6 +122,10 @@ void spawnBlocks(map_cell ** mappa, int numeroBuchi,int i,int j,int SO_HOLES) {
     }
 }
 
+
+
+
+
 void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_MIN, int *SO_CAP_MAX, int *SO_TIMENSEC_MIN, int* SO_TIMENSEC_MAX, int argc, char *argv[]){
     int screenHeight, screenWidth;
     char bufferTemp[1024]; /*buffer temporaneo per lettura dei parametri da tastiera*/
@@ -175,7 +179,7 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
     printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nPress any key to start the simulation...", *SO_TAXI, *SO_SOURCES, *SO_HOLES, *SO_CAP_MIN, *SO_CAP_MAX, *SO_TIMENSEC_MIN, *SO_TIMENSEC_MAX, C_YELLOW, screenHeight, screenWidth, C_DEFAULT);
 
     tmpChar=getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
-
+    /*aggiuntgere chiamata ricorsiva per conferma*/
 }
 
 

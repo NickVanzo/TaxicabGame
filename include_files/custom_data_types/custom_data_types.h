@@ -32,6 +32,7 @@ typedef struct{
     cell_type cellType; /*indica il tipo di cella che sto creando */
     int availableSpace; /*spazio disponibile di taxi nella cella. è una variabile di tipo semaforo*/
     int taxiOnThisCell; /*numero intero che indica il numero di taxi presenti nella cella*/
+    int availableForHoles; /*dice se una determinata cella che voglio trasformare in buco può essere trasformata*/
     time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
-    int availableForHoles;
+    
 } map_cell;

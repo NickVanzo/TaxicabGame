@@ -24,6 +24,11 @@
     #include "./include_files/colors/colors.h"
 #endif
 
+#ifndef INCLUDE_UNISTD
+    #define INCLUDE_UNISTD
+    #include <unistd.h>
+#endif
+
 
 #ifndef DEFINES
     #define DEFINES
