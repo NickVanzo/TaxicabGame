@@ -26,11 +26,11 @@ void stampaStatistiche(map_cell **mappa, int *statistiche);
 */
 void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_MIN, int *SO_CAP_MAX, int *SO_TIMENSEC_MIN, int* SO_TIMENSEC_MAX, int argc, char *argv[]);
 
+/*Aggiungi descrizione*/
 void spawnBlocks(map_cell **mappa, int numeroBuchi,int i, int j, int SO_HOLES);
 
 
 int main(int argc, char *argv[]){
-    
     int i,j,numeroBuchi; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX; /*parametri letti o inseriti a compilazione*/
 
@@ -39,6 +39,7 @@ int main(int argc, char *argv[]){
 
     int stats[6]; /*TEMPORANEA DA METTERE MEGLIO SOLO PER NON AVERE BUFFER OVERFLOW nei test di stampa dello schermo*/
 
+    srand(getpid()); 
  
     /*avvio setup della simulazione*/
     setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, argc, argv);
@@ -56,8 +57,9 @@ int main(int argc, char *argv[]){
    return 0;
 }
 
-
+/*Togli i, j*/
 void spawnBlocks(map_cell ** mappa, int numeroBuchi,int i,int j,int SO_HOLES) {
+
     numeroBuchi = 0;
     /*inizializzo il tipo di ogni cella della tabella ROAD e marco come 1(inteso come la variabile booleana TRUE) la disponibilita' di ospitare un buco*/
     /*========================NICK============================*/
@@ -72,49 +74,58 @@ void spawnBlocks(map_cell ** mappa, int numeroBuchi,int i,int j,int SO_HOLES) {
     while(numeroBuchi < SO_HOLES) {
         /*PROBLEMA DELL'ALGORITMO: TROPPI BUCHI LO FANNO CICLARE ALL'INFINITO PERCHE' NON TROVA COORDINATE ADATTE, NON DOVREBBERO ESSERCI ALTRI PROBLEMI NOTI AL MOMENTO*/
         /*Randomizzo le coordinate della cella che voglio far diventare buco*/
-        srand(i); 
         i = rand()%SO_HEIGHT;
         j = rand()%SO_WIDTH;
         if((&mappa[i][j])->availableForHoles == 1) {
             /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
             (&mappa[i][j])->cellType = BLOCK;
+            (&mappa[i][j])->availableForHoles = 0;
 
             #ifdef DEBUG_BLOCK 
             fprintf(stdout, "%d - Posizionato buco in posizione %d%d\n", numeroBuchi,i,j); 
             #endif
             /*La cella su cui posiziono il buco non potra' contenere altri buchi e nemmeno le 8 celle che ha intorno potranno*/
-            (&mappa[i][j])->availableForHoles = 0;
 
-            /*Marco come inutilizzabili per contenere buchi le celle intorno alla cella su cui ho posizionato il buco*/
+            /*marco come inutilizzabili per contenere buchi le celle intorno alla cella su cui ho posizionato il buco*/
             if(i > 0) {
                 if(j > 0)
+                    {
                     /*Cella in alto a sinistra*/
                     (&mappa[i-1][j-1])->availableForHoles = 0;
+                    }
                 /*Cella in alto centrale*/
                 (&mappa[i-1][j])->availableForHoles = 0;
-                if(j < SO_WIDTH-1)
-                    /*Cella in alto a destra*/ 
-                    (&mappa[i-1][j+1])->availableForHoles = 0;
+                if(j < SO_WIDTH-1) {
+                    /*Cella centrale a sinistra*/
+                    (&mappa[i][j-1])->availableForHoles = 0;
+                }
+                    
             }
 
-            if(j > 0) 
+            if(j > 0) {
                 /*Cella centrale a sinistra*/
                 (&mappa[i][j-1])->availableForHoles = 0;
+            }
+                
             /*Per la cella centrale non ho bisogno di un ulteriore controllo perche' e' la cella su cui siamo seduti*/
             if(j < SO_WIDTH-1)
-                /*Cella centrale a destra*/
-                (&mappa[i][j+1])->availableForHoles = 0;
+                {
+                    /*Cella centrale a destra*/
+                    (&mappa[i][j+1])->availableForHoles = 0;
+                }
             
             if(i < SO_HEIGHT-1) {
-                if(j > 0)
+                if(j > 0) {
                     /*Cella in basso a sinistra*/
                     (&mappa[i+1][j-1])->availableForHoles = 0;
+                }
                 /*Cella in basso centrale*/
                 (&mappa[i+1][j])->availableForHoles = 0;
                 
-                if(j < SO_WIDTH-1)
-                    /*Cella in basso a destra*/
-                    (&mappa[i+1][j+1])->availableForHoles = 0;
+                if(j < SO_WIDTH-1) {
+                        /*Cella in basso a destra*/
+                        (&mappa[i+1][j+1])->availableForHoles = 0;
+                    }
             }
             /*Se il buco e' stato posizionato allora incremento, altrimenti non ho trovato una posizione valida, continuo il ciclo*/
             numeroBuchi++;
