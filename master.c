@@ -16,8 +16,8 @@
         5-> pid processo che ha servito più clienti
 */
 
-/*NOTA PER MARCO: TOGLIERE IL PTR ALLA STRUTTURA MAP_CELL E METTERE UN PTR ALLA SHARED MEMORY! ora così non funziona ma l'algoritmo di base funge*/
-void stampaStatistiche(map_cell *mappa[], int righeMappa, int colonneMappa, int *statistiche){
+
+void stampaStatistiche(map_cell **mappa, int righeMappa, int colonneMappa, int *statistiche){
     int i,j,k;
     char *stats[] = {
         " | Number of successfoul rides: ",
@@ -28,29 +28,56 @@ void stampaStatistiche(map_cell *mappa[], int righeMappa, int colonneMappa, int 
         " | Taxi with most succesfoul rides: "
     };
 
-    char *strTmp;
+    char *strTmp = (char *)malloc(7);
 
+
+    /*stampèo bordo superiore*/
+    for(i=0;i<colonneMappa+2;i++){
+        colorPrintf("       ", GRAY, GRAY);
+    }
+    printf("\n");
+    for(i=0;i<colonneMappa+2;i++){
+        colorPrintf("       ", GRAY, GRAY);
+    }
+    printf("\n");
+
+
+    
     for(i=0; i<righeMappa; i++){
+        colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
         for(j=0;j<colonneMappa;j++){
 
                 if((&mappa[i][j])->cellType == ROAD){
-                    sprintf(strTmp, " %d ", (&mappa[i][j])->taxiOnThisCell );
+                    sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
                     colorPrintf(strTmp, BLACK, WHITE);
                 }else if((&mappa[i][j])->cellType == SOURCE){
-                    sprintf(strTmp, " %d ", (&mappa[i][j])->taxiOnThisCell );
+                    sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
                     colorPrintf(strTmp, BLACK, MAGENTA);
                 }else{
-                    colorPrintf("   ", BLACK, BLACK);
+                    sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
+                    colorPrintf(strTmp, BLACK, BLACK);
                 }
                 
         }
+         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
          if(i<6) printf("%s\n", stats[i]);
          else printf("\n");
     }
 
+
+    /*stampo bordo inferiore*/
+    for(i=0;i<colonneMappa+2;i++){
+        colorPrintf("       ", GRAY, GRAY);
+    }
+    printf("\n");
+    for(i=0;i<colonneMappa+2;i++){
+        colorPrintf("       ", GRAY, GRAY);
+    }
+    printf("\n");
+
     /*controllo che ho stampato tutti gli stats*/
     if(righeMappa < 6){
-        for(i=colonneMappa; i<6;i++){
+        for(i=colonneMappa+2; i<6;i++){
             for(j=0;j<colonneMappa; j++) printf("   "); /*mi allineo alla fine*/
             printf("%s\n", stats[i]);
         }
@@ -64,11 +91,36 @@ void stampaStatistiche(map_cell *mappa[], int righeMappa, int colonneMappa, int 
 
 int main(){
 
+    /*esmpio di codice di come allocare la matrice nello heap per poter passare la matrice qualsiasi dimensione all funzione di stampa!*/
+
+    int i,j;
+    int righe,colonne;
+    map_cell **mappa;
+
+    righe = 10;
+    colonne = 10;
+
+    mappa = (map_cell **) malloc(10*sizeof(map_cell*));
+
+
+    for(i=0;i<righe;i++){
+        mappa[i] = (map_cell *) malloc(10*sizeof(map_cell));
+    }
+
+
+   for(i=0;i<righe;i++){
+       srand(i);
+       for(j=0;j<righe;j++){
+           (&mappa[i][j])->cellType = ((i+j)*(i*j) * rand())%3;
+           (&mappa[i][j])->taxiOnThisCell = i+j;
+       }
+   }
+
    
-    
-   
-    
-    return 0;
+      
+   stampaStatistiche(mappa, righe, colonne, NULL);
+
+   return 0;
 }
 
 

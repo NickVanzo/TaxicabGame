@@ -13,6 +13,11 @@
     #include <time.h>
 #endif
 
+#ifndef INCLUDE_STRINGS
+    #define INCLUDE_STRINGS
+    #include <string.h>
+#endif
+
 
 #ifndef INCLUDE_COLORS
     #define INCLUDE_COLORS
