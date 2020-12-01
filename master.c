@@ -206,7 +206,7 @@ void stampaStatistiche(map_cell **mappa, int *statistiche){
         " | Taxi with most succesfoul rides: "
     };
 
-    char *strTmp = (char *)malloc(7);
+    char *strTmp = (char *)malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
 
 
     /*stampèo bordo superiore*/
@@ -232,13 +232,12 @@ void stampaStatistiche(map_cell **mappa, int *statistiche){
                     sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
                     colorPrintf(strTmp, BLACK, MAGENTA);
                 }else{
-                    sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
-                    colorPrintf(strTmp, BLACK, BLACK);
+                    colorPrintf( "       ", BLACK, BLACK);
                 }
                 
         }
          colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
-         if(i<6) printf("%s%d\n", stats[i], statistiche[i]);
+         if(i<6) printf("%s%d\n", stats[i], statistiche[i]); /*se ho stampato meno di 6 stat allora stampo la statistica i e il valore della sua stat*/
          else printf("\n");
     }
 
@@ -256,7 +255,7 @@ void stampaStatistiche(map_cell **mappa, int *statistiche){
     /*controllo che ho stampato tutti gli stats*/
     if(SO_HEIGHT < 6){
         for(i=SO_WIDTH+2; i<6;i++){
-            for(j=0;j<SO_WIDTH; j++) printf("   "); /*mi allineo alla fine*/
+            for(j=0;j<SO_WIDTH; j++) printf("       "); /*mi allineo alla fine*/
             printf("%s%d\n", stats[i],0);
         }
     }
