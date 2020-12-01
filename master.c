@@ -325,7 +325,7 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
                         taxiOnTheCell = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
                         sprintf(strTmp, " %-5d ",  taxiOnTheCell);
 
-                        if(taxiOnTheCell > SO_TOP_CELLS)  colorPrintf(strTmp, BLACK, YELLOW);
+                        if(taxiOnTheCell > SO_TOP_CELLS)  colorPrintf(strTmp, BLACK, RED);
                         else colorPrintf(strTmp, BLACK, WHITE);
                         
                    }else{
