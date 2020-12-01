@@ -29,6 +29,11 @@
     #include <unistd.h>
 #endif
 
+#ifndef INCLUDE_SIGNAL
+    #define INCLUDE_SIGNAL
+    #include <signal.h>
+#endif
+
 
 #ifndef DEFINES
     #define DEFINES

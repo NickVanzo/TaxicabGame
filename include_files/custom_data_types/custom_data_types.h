@@ -34,5 +34,5 @@ typedef struct{
     int taxiOnThisCell; /*numero intero che indica il numero di taxi presenti nella cella*/
     int availableForHoles; /*dice se una determinata cella che voglio trasformare in buco può essere trasformata*/
     time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
-    
+    int totalNumberOfTaxiPassedHere; /*indica il numero totale di taxi passati su questa cella*/
 } map_cell;
