@@ -15,7 +15,7 @@
         5-> pid processo che ha servito più clienti
     boolean finalPrint indica se è la stampa finale della mappa e quindi evidenziare le celle più trafficate
 */
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS, int **topCellsArray);
+void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]){
     int i,j; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION; /*parametri letti o inseriti a compilazione*/
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
-    int **positionOfNtopCells;/*mi salvo la posizione delle top cells da stampare*/
+    
 
 
     map_cell **mappa;
@@ -89,12 +89,6 @@ int main(int argc, char *argv[]){
    
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
-
-     /*inizializzo la matrice per le coordinate di topCells top cells*/
-    positionOfNtopCells = (int **)malloc(SO_TOP_CELLS);
-    for(i=0;i<SO_TOP_CELLS;i++){
-        positionOfNtopCells[i] = (int *)malloc(2*sizeof(int));
-    }
     
 
     /*creo lo spazio della matrice nello heap--DA CAMBIARE A SHMMEM*/
@@ -113,7 +107,7 @@ int main(int argc, char *argv[]){
     while(!exitFromProgram){
         /*per il marco del futuro: questa deve essere messa tra una P e una V*/
         /*per il marco del futuro: qua devo andare a aggiornare mapStats[]*/
-        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS, positionOfNtopCells);
+        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS);
         sleep(1);
     }
 
@@ -122,7 +116,7 @@ int main(int argc, char *argv[]){
     searchForTopCells(mappa, SO_TOP_CELLS);/*cerco e marco le SO_TOP_CELL*/
 
 
-    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, positionOfNtopCells);
+    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for(i=0;i<SO_HEIGHT; i++){
@@ -320,14 +314,14 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
 
 
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS, int **topCellsArray){
+void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS){
     int i,j,k, printedStats=0, taxiOnTheCell;
     char stats[12][128];
     const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
     char *strTmp = (char *)malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
     
 
-    /*creo le strincge da stampare*/
+    /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\e[33m Statistics for running simulation \e[39m");
     sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
     sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
@@ -475,10 +469,10 @@ void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_M
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
                 (&mappa[i][j])->availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL | 0600);  
             } 
-            while((&mappa[i][j])->availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno*/
+            while((&mappa[i][j])->availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
 
             /*imposto il valore del semaforo a un numero tra socap min e max*/
-            if(SO_CAP_MAX != SO_CAP_MIN){ /*con questo evito errori di divisioni per 0*/
+            if(SO_CAP_MAX > SO_CAP_MIN){ /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max < min*/
                 semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
             }else{
                 semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN);
@@ -488,7 +482,7 @@ void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_M
             (&mappa[i][j]) -> taxiOnThisCell = 0;
             (&mappa[i][j]) -> totalNumberOfTaxiPassedHere = 0;
 
-            if(SO_TIMENSEC_MAX != SO_TIMENSEC_MIN){ /*con questo evito errori di divisioni per 0*/
+            if(SO_TIMENSEC_MAX > SO_TIMENSEC_MIN){ /*con questo evito errori di divisioni per 0*/
                 (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN + (rand()% (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN));
             }else{
                 (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN;
