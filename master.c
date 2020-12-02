@@ -117,11 +117,19 @@ int main(int argc, char *argv[]){
         sleep(1);
     }
 
+    /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
+
     searchForTopCells(mappa, SO_TOP_CELLS);/*cerco e marco le SO_TOP_CELL*/
+
 
     stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, positionOfNtopCells);
 
-    /*libero la memoria condivisa*/
+    /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
+    for(i=0;i<SO_HEIGHT; i++){
+        for(j=0;j<SO_WIDTH; j++){
+            semctl((&mappa[i][j])->availableSpace, 0, IPC_RMID);
+        }
+    }
     for(i=0;i<SO_HEIGHT;i++){
         free(mappa[i]);
     }
@@ -484,7 +492,7 @@ void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_M
             /*inizialisso il semaforo con lo spazio creto a random tra SO_CAP_MIN e MAX*/
             do{
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
-                (&mappa[i][j])->availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL);  
+                (&mappa[i][j])->availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL | 0600);  
             } 
             while((&mappa[i][j])->availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno*/
 
