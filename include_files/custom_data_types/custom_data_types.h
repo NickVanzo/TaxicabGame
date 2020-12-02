@@ -37,3 +37,10 @@ typedef struct{
     time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
     boolean isInTopSoCell; /*questo valore mi dice se la mia cella è nelle SO_TOP_CELL per traffico passato da qua da stampare a fine simulazione*/
 } map_cell;
+
+/*struttura per invvio messaggi contentente richiesta di corsa a un taxi*/
+struct msgBuf{
+    long mtype; /*se mtype = 0 kill di chi lo legge, se mtype = 1...n richiedere corsa a source 1...n*/ 
+    int xDest; 
+    int yDest;
+}
