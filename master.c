@@ -341,56 +341,40 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
     sprintf(stats[10], "%s", " | \e[107m  \e[49m -> White shows roads");
     sprintf(stats[11], "%s", " | \e[43m  \e[49m -> Yellow shows SO_TOP_CELLS (only final print)");
     
-    for(k=0;k<2;k++, printedStats++){
+    for(k=0;k<2;k++, printedStats++){ /*stampo il bordo superiore*/
         for(i=0;i<SO_WIDTH+2;i++)  colorPrintf("       ", GRAY, GRAY);
         printf("%s\n", stats[printedStats]);
     }
     
-    for(i=0; i<SO_HEIGHT; i++){
+    for (i = 0; i < SO_HEIGHT; i++) { /*stampo il corpo della mappa*/
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
-        for(j=0;j<SO_WIDTH;j++){
-                if((&mappa[i][j])->cellType == ROAD){
-                    /*se sono alla stampa finale allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
-                    if(finalPrint == TRUE){
-                        taxiOnTheCell = (&mappa[i][j])->taxiOnThisCell;
-                        sprintf(strTmp, " %-5d ",  taxiOnTheCell);
-
-                        if( (&mappa[i][j])->isInTopSoCell == TRUE )  colorPrintf(strTmp, BLACK, YELLOW); /*se sono alla stampa finale, mostro la most frquented cell...*/
-                        else colorPrintf(strTmp, BLACK, WHITE);
-                        
-                   }else{
-                       if((&mappa[i][j])->cellType == ROAD){
-                            sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
-                            colorPrintf(strTmp, BLACK, WHITE);
-                        }else if((&mappa[i][j])->cellType == SOURCE){
-                            sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
-                            colorPrintf(strTmp, BLACK, MAGENTA);
-                        }else colorPrintf( "       ", BLACK, BLACK);
-                        
-                   }    
-                }else if((&mappa[i][j])->cellType == SOURCE){
-                    sprintf(strTmp, " %-5d ", (&mappa[i][j])->taxiOnThisCell );
-                    colorPrintf(strTmp, BLACK, MAGENTA);
-                }else{
-                    colorPrintf( "       ", BLACK, BLACK);
-                }     
+        for (j = 0; j < SO_WIDTH; j++) {
+            sprintf(strTmp, " %-5d ", (&mappa[i][j]) -> taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+            if ((&mappa[i][j]) -> cellType == ROAD) {
+                /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
+                if ((finalPrint == TRUE) && ( (&mappa[i][j]) -> isInTopSoCell == TRUE )) {  colorPrintf(strTmp, BLACK, YELLOW); }/*se sono alla stampa finale, mostro la most frquented cell...*/
+                else{ colorPrintf(strTmp, BLACK, WHITE);  } /*se non sono alla stampa finale allora devo solamente andare a stampare le srade bianche...*/
+                
+            } else if (( & mappa[i][j]) -> cellType == SOURCE) {
+                colorPrintf(strTmp, BLACK, MAGENTA);
+            } else {
+                colorPrintf("       ", BLACK, BLACK);
+            }
         }
 
-         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
-         if(i<numberOfStats){
-             printf("%s\n", stats[printedStats]);
-             printedStats++;
-         }else{
-             printf("\n");
-         } 
+        colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
+        if (i < numberOfStats) {
+            printf("%s\n", stats[printedStats]);
+            printedStats++;
+        } else {
+            printf("\n");
+        }
     }
 
     /*stampo bordo inferiore*/
     for(k=0;k<2;k++){
-        for(i=0;i<SO_WIDTH+2;i++) colorPrintf("       ", GRAY, GRAY);
-
-        /*stampo statistica a financo banda grigia*/
-        if(printedStats <numberOfStats){
+        for(i=0;i<SO_WIDTH+2;i++) colorPrintf("       ", GRAY, GRAY);  
+        if(printedStats <numberOfStats){ /*stampo statistica a financo banda grigia*/
             printf("%s\n", stats[printedStats]);
             printedStats++;
         }else{
@@ -406,8 +390,7 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
         }
     }
 
-
-    free(strTmp);
+    free(strTmp); /*dealloco strTmp*/
 }
 
 
@@ -477,12 +460,10 @@ void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
 }
 
 
-
+/*controllare qua dentro che mentre assegno il semaforo non ho errori e che non ho alcun tipo di problema! (errno)*/
 void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES ){
     
     int i, j;
-
-    
 
     spawnBlocks(mappa, SO_HOLES);
     spawnSources(mappa, SO_SOURCES);
