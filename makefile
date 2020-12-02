@@ -6,8 +6,8 @@ run: master taxi control
 master: master.o colors.o control taxi
 	$(CC) master.o colors.o -o master
 
-control: control.o
-	$(CC) control.o -o control
+control: control.o colors.o 
+	$(CC) control.o colors.o -o control
 
 taxi: taxi.o 	
 	$(CC) taxi.o -o taxi
