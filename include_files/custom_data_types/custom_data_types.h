@@ -33,6 +33,7 @@ typedef struct{
     int availableSpace; /*spazio disponibile di taxi nella cella. è una variabile di tipo semaforo*/
     int taxiOnThisCell; /*numero intero che indica il numero di taxi presenti nella cella*/
     int availableForHoles; /*dice se una determinata cella che voglio trasformare in buco può essere trasformata*/
-    time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
     int totalNumberOfTaxiPassedHere; /*indica il numero totale di taxi passati su questa cella*/
+    time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
+    boolean isInTopSoCell; /*questo valore mi dice se la mia cella è nelle SO_TOP_CELL per traffico passato da qua da stampare a fine simulazione*/
 } map_cell;

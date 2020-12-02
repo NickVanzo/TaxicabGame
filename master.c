@@ -15,7 +15,7 @@
         5-> pid processo che ha servito più clienti
     boolean finalPrint indica se è la stampa finale della mappa e quindi evidenziare le celle più trafficate
 */
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS);
+void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS, int **topCellsArray);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -49,6 +49,12 @@ void checkForDegeneresMap();
 
 
 
+/*questa funzione cerca nella mappa le top cells e le mette dentro la struttura dati topcellArray*/
+void searchForTopCells(map_cell **mappa, int SO_TOP_CELL);
+
+/*inizializzo i campi della mappa*/
+void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES );
+
 boolean exitFromProgram;
 
 /*
@@ -62,15 +68,19 @@ int main(int argc, char *argv[]){
     int i,j; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION; /*parametri letti o inseriti a compilazione*/
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
+    int **positionOfNtopCells;/*mi salvo la posizione delle top cells da stampare*/
+
+
     map_cell **mappa;
-    int runningTime = 0;
+    
+
     exitFromProgram = FALSE;
 
     /*imposto handler segnale timer*/
     signal(SIGALRM, signalHandler);
     
 
-    checkForDegeneresMap();/*controllo che la mappa non sia degenere*/
+    checkForDegeneresMap();/*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2*/
 
     srand(getpid());  /*init della rand per la funzione di assegnazione*/
  
@@ -79,6 +89,12 @@ int main(int argc, char *argv[]){
    
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
+
+     /*inizializzo la matrice per le coordinate di topCells top cells*/
+    positionOfNtopCells = (int **)malloc(SO_TOP_CELLS);
+    for(i=0;i<SO_TOP_CELLS;i++){
+        positionOfNtopCells[i] = (int *)malloc(2*sizeof(int));
+    }
     
 
     /*creo lo spazio della matrice nello heap--DA CAMBIARE A SHMMEM*/
@@ -87,24 +103,29 @@ int main(int argc, char *argv[]){
         mappa[i] = (map_cell *) malloc(SO_WIDTH*sizeof(map_cell));
     }
 
-    /*generazione di buchi a celle con coordinate casuali che rispettano quanto richiesto dalla consegna (distanza uno dall'altro)*/
-    spawnBlocks(mappa, SO_HOLES); 
-    /*generazione di sorgenti casuali*/
-    spawnSources(mappa, SO_SOURCES);  
-
+    
+    initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
     /*imposto durata simulazione*/
     alarm(SO_DURATION);
 
 
     while(!exitFromProgram){
-        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS);
-        printf("Running time: %ds\n", runningTime);
-        runningTime++;
+        /*per il marco del futuro: questa deve essere messa tra una P e una V*/
+        /*per il marco del futuro: qua devo andare a aggiornare mapStats[]*/
+        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS, positionOfNtopCells);
         sleep(1);
     }
-    
-    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
+
+    searchForTopCells(mappa, SO_TOP_CELLS);/*cerco e marco le SO_TOP_CELL*/
+
+    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, positionOfNtopCells);
+
+    /*libero la memoria condivisa*/
+    for(i=0;i<SO_HEIGHT;i++){
+        free(mappa[i]);
+    }
+    free(mappa);
 
    return 0;
 }
@@ -291,11 +312,12 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
 
 
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS){
+void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS, int **topCellsArray){
     int i,j,k, printedStats=0, taxiOnTheCell;
     char stats[12][128];
     const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
     char *strTmp = (char *)malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
+    
 
     /*creo le strincge da stampare*/
     sprintf(stats[0], "%s", " |\e[33m Statistics for running simulation \e[39m");
@@ -306,10 +328,10 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
     sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
     sprintf(stats[7], "%s", " |\e[33m Colours legend: \e[39m");
-    sprintf(stats[8], "%s", " | \e[40m  \e[49m -> Black color is a blocked zone");
-    sprintf(stats[9], "%s", " | \e[45m  \e[49m -> Magenta colour is a source point");
-    sprintf(stats[10], "%s", " | \e[107m  \e[49m -> White colour is a road with light traffic");
-    sprintf(stats[11], "%s", " | \e[41m  \e[49m -> Red color shows SO_TOP_CELLS");
+    sprintf(stats[8], "%s", " | \e[40m  \e[49m -> Black shows blocked zones");
+    sprintf(stats[9], "%s", " | \e[45m  \e[49m -> Magenta shows source points");
+    sprintf(stats[10], "%s", " | \e[107m  \e[49m -> White shows roads");
+    sprintf(stats[11], "%s", " | \e[43m  \e[49m -> Yellow shows SO_TOP_CELLS (only final print)");
     
     for(k=0;k<2;k++, printedStats++){
         for(i=0;i<SO_WIDTH+2;i++)  colorPrintf("       ", GRAY, GRAY);
@@ -322,10 +344,10 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
                 if((&mappa[i][j])->cellType == ROAD){
                     /*se sono alla stampa finale allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                     if(finalPrint == TRUE){
-                        taxiOnTheCell = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
+                        taxiOnTheCell = (&mappa[i][j])->taxiOnThisCell;
                         sprintf(strTmp, " %-5d ",  taxiOnTheCell);
 
-                        if(taxiOnTheCell > SO_TOP_CELLS)  colorPrintf(strTmp, BLACK, RED);
+                        if( (&mappa[i][j])->isInTopSoCell == TRUE )  colorPrintf(strTmp, BLACK, YELLOW); /*se sono alla stampa finale, mostro la most frquented cell...*/
                         else colorPrintf(strTmp, BLACK, WHITE);
                         
                    }else{
@@ -375,6 +397,9 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
             printf("%s\n", stats[i]);
         }
     }
+
+
+    free(strTmp);
 }
 
 
@@ -406,4 +431,84 @@ void signalHandler(int signal){
             break;
 
     }
+}
+
+
+
+
+
+void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
+    int i,j;
+    int maxValue, maxI, maxJ;
+    int placedTopCell = 0;
+
+    maxValue = INT_MIN;
+    maxI = 0; maxJ=0;
+
+    while(SO_TOP_CELL >0){
+        maxValue = INT_MIN;
+        maxI = 0; maxJ=0;
+
+        for(i=0;i<SO_HEIGHT; i++){
+            for(j=0;j<SO_WIDTH;j++){
+                if( ((&mappa[i][j])->isInTopSoCell == FALSE) && ((&mappa[i][j])->totalNumberOfTaxiPassedHere > maxValue)){
+                    maxValue = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
+                    maxI = i;
+                    maxJ = j;
+                }
+            }
+        }
+
+        /*marco da stampare la cella a fine simulazione*/
+        (&mappa[maxI][maxJ])->isInTopSoCell = TRUE;
+
+
+        SO_TOP_CELL--;
+    }
+    
+}
+
+
+
+void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES ){
+    
+    int i, j;
+
+    
+
+    spawnBlocks(mappa, SO_HOLES);
+    spawnSources(mappa, SO_SOURCES);
+
+    for(i=0;i<SO_HEIGHT; i++){
+        for(j=0;j<SO_WIDTH; j++){
+            /*inizialisso il semaforo con lo spazio creto a random tra SO_CAP_MIN e MAX*/
+            do{
+                /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
+                (&mappa[i][j])->availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL);  
+            } 
+            while((&mappa[i][j])->availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno*/
+
+            /*imposto il valore del semaforo a un numero tra socap min e max*/
+            if(SO_CAP_MAX != SO_CAP_MIN){ /*con questo evito errori di divisioni per 0*/
+                semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
+            }else{
+                semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN);
+            }
+            
+
+            (&mappa[i][j]) -> taxiOnThisCell = 0;
+            (&mappa[i][j]) -> totalNumberOfTaxiPassedHere = 0;
+
+            if(SO_TIMENSEC_MAX != SO_TIMENSEC_MIN){ /*con questo evito errori di divisioni per 0*/
+                (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN + (rand()% (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN));
+            }else{
+                (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN;
+            }
+            
+
+            (&mappa[i][j]) -> isInTopSoCell = FALSE;
+
+        }
+    }
+
 }
