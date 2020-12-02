@@ -29,6 +29,37 @@
     #include <unistd.h>
 #endif
 
+#ifndef INCLUDE_SIGNAL
+    #define INCLUDE_SIGNAL
+    #include <signal.h>
+#endif
+
+
+#ifndef INCLUDE_TYPES
+    #define INCLUDE_TYPES
+    #include <sys/types.h>
+#endif
+
+#ifndef INCLUDE_IPC
+    #define INCLUDE_IPC
+    #include <sys/ipc.h>
+#endif
+
+#ifndef INCLUDE_SEM
+    #define INCLUDE_SEM
+    #include <sys/sem.h>
+#endif
+
+#ifndef INCLUDE_LIMITS
+    #define INCLUDE_LIMITS
+    #include <limits.h>
+#endif
+
+#ifndef INCLUDE_ERRNO
+    #define INCLUDE_ERRNO
+    #include <errno.h>
+#endif
+
 
 #ifndef DEFINES
     #define DEFINES
