@@ -43,4 +43,4 @@ struct msgBuf{
     long mtype; /*se mtype = 0 kill di chi lo legge, se mtype = 1...n richiedere corsa a source 1...n*/ 
     int xDest; 
     int yDest;
-}
+};
