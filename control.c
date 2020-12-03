@@ -15,7 +15,7 @@ int main(int argc, char *argv[]){
     
     msgQueueKey = ftok("./msgQueue.key",1);
 
-    msgQueue = msgget(msgQueueKey, IPC_CREAT | 0600); /*ottengo la chiave della msg queue*/
+    msgQueue = msgget(msgQueueKey, 0); /*ottengo la chiave della msg queue*/
 
     if(msgQueue <0){
         colorPrintf("\n\tUnable to connect to main simulation message queue...\n\tAre you shure the simulation is running?\n", RED, DEFAULT);

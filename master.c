@@ -86,7 +86,7 @@ int main(int argc, char *argv[]){
     exitFromProgram = FALSE;
 
     /*Ottengo la chiave per la coda di messaggi*/
-    key = ftok("msgQueue.key", '1');
+    key = ftok("msgQueue.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
     queue_id = setupQueue(SO_SOURCES, key);
@@ -114,6 +114,8 @@ int main(int argc, char *argv[]){
 
     
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
+
+    /*NICK METTI FORK PER CREARE so_source*/
 
     /*imposto durata simulazione*/
     alarm(SO_DURATION);
@@ -144,6 +146,7 @@ int main(int argc, char *argv[]){
     }
     free(mappa);
     msgctl(queue_id, IPC_RMID, NULL);
+    
    return 0;
 }
 

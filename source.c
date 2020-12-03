@@ -73,6 +73,7 @@ void main(int argc, char * argv[]) {
 	/*	
  		PROBLEMA: cosa succede se non tutti i figli sono riusciti a terminare entro lo scadere del tempo di gioco? Ragionarci su
  		PROBLEMA2: i processi passano a running anche se ricevono segnali diversi da SIGALRM, procedere con mask? Cambiare strategia?
+                        -> usa sigprocmask()
  	*/
  	while(wait(NULL) != -1) { /*Aspetto che tutti i figli abbiano terminato, volevo farlo con waitpid ma e' tardi e sono stanco (la modifico domani)*/
  		#ifdef 0
