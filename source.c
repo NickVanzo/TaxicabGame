@@ -20,7 +20,7 @@ void main(int argc, char * argv[]) {
 	int shm_id; /*ID della memoria condivisa*/
 
 	map_cell **mappa; /*Copia provvisoria della mappa, da modificare appena si fa la memoria condivisa*/
-	map_cell *sources[SO_SOURCES]; /*Array contenente puntatori alle celle SO_SOURCES*/
+	map_cell sources[SO_SOURCES]; /*Array contenente le celle SO_SOURCES*/
 
 	shm_id = shmget(IPC_PRIVATE, sizeof(map_cell **mappa)*(SO_WIDTH*SO_SOURCES), 0600);
 	/*Attach la memoria condivisa ad un puntatore, il flag e' settato a RDONLY perche' non devo scrivere in memoria ma solo trovare le celle da aggiungere a sources*/
@@ -35,7 +35,7 @@ void main(int argc, char * argv[]) {
 		for(j=0; j < SO_HEIGHT; j++) {
 			if((&mappa[i][j])->cellType == SOURCE) {
 				/*Aggiungo la cella SOURCE all'array di SOURCES e incremento la variabile k per spostarmi nell'array delle SO_SOURCES*/
-				source[k] = (&mappa[i][j]); 
+				sources[k] = (&mappa[i][j]); 
 				k++;
 			}
 		}
@@ -43,7 +43,7 @@ void main(int argc, char * argv[]) {
 
 	/*Ora conosco le coordinate delle SO_SOURCES celle, comincio a costruire il messaggio da mandare in coda*/
 	/*Ottengo la chiave della coda di messaggi*/
-	key = ftok("msgQueue.key", '1');
+	key = ftok("msgQueue.key", 1);
 
 	/*Ottengo l'ID della coda di messaggi*/
 	if(queue_ID = msgget(key, IPC_CREAT) == -1) {
@@ -79,11 +79,6 @@ void main(int argc, char * argv[]) {
  		#ifdef 0
  			fprintf(stdout, "Un figlio e' terminato!");
  		#endif
- 	}
-
- 	/*Dealloco l'array di puntatori*/
- 	for(i = 0; i < SO_SOURCES; i++) {
- 		free(sources[i]);
  	}
 }
 

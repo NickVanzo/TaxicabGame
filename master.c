@@ -1,4 +1,3 @@
-
 #include "include_main.h"
 
 
@@ -15,7 +14,7 @@
         5-> pid processo che ha servito più clienti
     boolean finalPrint indica se è la stampa finale della mappa e quindi evidenziare le celle più trafficate
 */
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS);
+void stampaStatistiche(struct grigliaCitta* mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -33,7 +32,7 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
     fino a quando ci sono blocchi da aggiungere nella mappa gli aggiungo 
     se ci sono troppi blocchi da posizionare il programma cicla all'infinito
 */
-void spawnBlocks(map_cell **mappa,int SO_HOLES);
+void spawnBlocks(struct grigliaCitta* mappa,int SO_HOLES);
 
 /*
     funzione per posizionare le SOURCES all'interno della griglia della citta'
@@ -41,7 +40,7 @@ void spawnBlocks(map_cell **mappa,int SO_HOLES);
     fino a quando ci sono SOURCES da piazzare la funzione cicla 
     per piazzare una SOURCE dobbiamo assicurarci che stiamo cercando di posizionarla in una ROAD e non in un BLOCK
 */
-void spawnSources(map_cell **mappa,int SO_SOURCES);
+void spawnSources(struct grigliaCitta* mappa,int SO_SOURCES);
 
 
 /*funzione per potere verificare che una mappa non sia degenere*/
@@ -50,10 +49,10 @@ void checkForDegeneresMap();
 
 
 /*questa funzione cerca nella mappa le top cells e le mette dentro la struttura dati topcellArray*/
-void searchForTopCells(map_cell **mappa, int SO_TOP_CELL);
+void searchForTopCells(struct grigliaCitta* mappa, int SO_TOP_CELL);
 
 /*inizializzo i campi della mappa*/
-void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES );
+void initMap(struct grigliaCitta* mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES );
 
 boolean exitFromProgram;
 
@@ -80,8 +79,13 @@ int main(int argc, char *argv[]){
     int queue_id;
     int shmId, shmKey;
 
+    /*Variabili per memoria condivisa*/
+    struct grigliaCitta* mappa;
+    /*Prima cosa, creo questa dio merda di memoria condivisa*/
+    shmKey = shmget(IPC_PRIVATE, sizeof(struct grigliaCitta), 0600);
+    mappa = shmat(shmKey, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
 
-    map_cell **mappa;
+    /*map_cell **mappa;*/
     
     /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
     exitFromProgram = FALSE;
@@ -107,12 +111,6 @@ int main(int argc, char *argv[]){
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
     
-
-    /*creo lo spazio della matrice nella memoria condivisa*/
-    shmKey=ftok("msgQueue.key", 2);
-    shmId = shmget(shmKey, SO_HEIGHT * SO_WIDTH * sizeof(map_cell), IPC_CREAT | IPC_EXCL | 0600); /*creo lo spazio dell'area condivisa*/
-    mappa = (map_cell **) shmat(shmId, NULL, 0);
-
 
     /*
     mappa = (map_cell **) malloc(SO_HEIGHT*sizeof(map_cell*));
@@ -147,7 +145,8 @@ int main(int argc, char *argv[]){
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
    
-
+    shmdt(mappa);
+    shmctl(shmKey, IPC_RMID, NULL);
 
     msgctl(queue_id, IPC_RMID, NULL);
 
@@ -156,21 +155,17 @@ int main(int argc, char *argv[]){
 
 
 
-
-
-
-
-void spawnBlocks(map_cell ** mappa,int SO_HOLES) {
+void spawnBlocks(struct grigliaCitta* mappa,int SO_HOLES) {
     int k,q; /*Variabili usate per ciclare*/
     int numeroBuchi = 0;
     /*inizializzo il tipo di ogni cella della tabella ROAD e marco come 1(inteso come la variabile booleana TRUE) la disponibilita' di ospitare un buco*/
     for(k=0;k<SO_HEIGHT;k++) {
         for(q=0;q<SO_WIDTH;q++) {
-            (&mappa[k][q])->cellType = ROAD; 
-            (&mappa[k][q])->availableForHoles = 1;
+            mappa->matrice[k][q].cellType = ROAD; 
+            mappa->matrice[k][q].availableForHoles = 1;
 
             /*solo per test colori*/
-            (&mappa[k][q])->totalNumberOfTaxiPassedHere = rand()%13;
+            mappa->matrice[k][q].totalNumberOfTaxiPassedHere = rand()%13;
         }
     }
 
@@ -180,10 +175,10 @@ void spawnBlocks(map_cell ** mappa,int SO_HOLES) {
         /*Randomizzo le coordinate della cella che voglio far diventare buco*/
         k = rand()%SO_HEIGHT;
         q = rand()%SO_WIDTH;
-        if((&mappa[k][q])->availableForHoles == 1) {
+        if(mappa->matrice[k][q].availableForHoles == 1) {
             /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
-            (&mappa[k][q])->cellType = BLOCK;
-            (&mappa[k][q])->availableForHoles = 0;
+            mappa->matrice[k][q].cellType = BLOCK;
+            mappa->matrice[k][q].availableForHoles = 0;
 
             #ifdef DEBUG_BLOCK 
             fprintf(stdout, "%d - Posizionato buco in posizione %d%d\n", numeroBuchi,k,q); 
@@ -195,40 +190,40 @@ void spawnBlocks(map_cell ** mappa,int SO_HOLES) {
                 if(q > 0)
                     {
                     /*Cella in alto a sinistra*/
-                    (&mappa[k-1][q-1])->availableForHoles = 0;
+                    mappa->matrice[k-1][q-1].availableForHoles = 0;
                     }
                 /*Cella in alto centrale*/
-                (&mappa[k-1][q])->availableForHoles = 0;
+                mappa->matrice[k-1][q].availableForHoles = 0;
                 if(q < SO_WIDTH-1) {
                     /*Cella in alto a destra*/
-                    (&mappa[k-1][q+1])->availableForHoles = 0;
+                    mappa->matrice[k-1][q+1].availableForHoles = 0;
                 }
                     
             }
 
             if(q > 0) {
                 /*Cella centrale a sinistra*/
-                (&mappa[k][q-1])->availableForHoles = 0;
+                mappa->matrice[k][q-1].availableForHoles = 0;
             }
                 
             /*Per la cella centrale non ho bisogno di un ulteriore controllo perche' e' la cella su cui siamo seduti*/
             if(q < SO_WIDTH-1)
                 {
                     /*Cella centrale a destra*/
-                    (&mappa[k][q+1])->availableForHoles = 0;
+                    mappa->matrice[k][q+1].availableForHoles = 0;
                 }
             
             if(k < SO_HEIGHT-1) {
                 if(q > 0) {
                     /*Cella in basso a sinistra*/
-                    (&mappa[k+1][q-1])->availableForHoles = 0;
+                    mappa->matrice[k+1][q-1].availableForHoles = 0;
                 }
                 /*Cella in basso centrale*/
-                (&mappa[k+1][q])->availableForHoles = 0;
+                mappa->matrice[k+1][q].availableForHoles = 0;
                 
                 if(q < SO_WIDTH-1) {
                         /*Cella in basso a destra*/
-                        (&mappa[k+1][q+1])->availableForHoles = 0;
+                        mappa->matrice[k+1][q+1].availableForHoles = 0;
                     }
             }
             /*Se il buco e' stato posizionato allora incremento, altrimenti non ho trovato una posizione valida, continuo il ciclo*/
@@ -237,7 +232,7 @@ void spawnBlocks(map_cell ** mappa,int SO_HOLES) {
     }
 }
 
-void spawnSources(map_cell **mappa, int SO_SOURCES) {
+void spawnSources(struct grigliaCitta* mappa, int SO_SOURCES) {
     int numeroSources = 0; /*variabile per tenere conto di quante Sources sono state piazzate nella mappa*/
     int n,l; /*variabili che determinano il posizionamento nella griglia*/
 
@@ -249,8 +244,8 @@ void spawnSources(map_cell **mappa, int SO_SOURCES) {
         l = rand()%SO_WIDTH;
 
         /*Se la cella che mi e' capitata e' di tipo ROAD allora posiziono la SOURCE e incremento il numero di SOURCE posizionate*/
-        if((&mappa[n][l])->cellType == ROAD) {
-            (&mappa[n][l])->cellType = SOURCE;
+        if(mappa->matrice[n][l].cellType == ROAD) {
+            mappa->matrice[n][l].cellType = SOURCE;
             numeroSources++;
         }
         /*Se la cella che mi e' capitata non e' di tipo ROAD allora continuo il ciclo senza incrementare il numero di SOURCE posizionate*/
@@ -336,7 +331,7 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
 
 
-void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS){
+void stampaStatistiche(struct grigliaCitta* mappa, int *statistiche, boolean finalPrint, int SO_TOP_CELLS){
     int i,j,k, printedStats=0, taxiOnTheCell;
     char stats[12][128];
     const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
@@ -365,13 +360,13 @@ void stampaStatistiche(map_cell **mappa, int *statistiche, boolean finalPrint, i
     for (i = 0; i < SO_HEIGHT; i++) { /*stampo il corpo della mappa*/
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
-            sprintf(strTmp, " %-5d ", (&mappa[i][j]) -> taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-            if ((&mappa[i][j]) -> cellType == ROAD) {
+            sprintf(strTmp, " %-5d ", mappa->matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+            if (mappa->matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
-                if ((finalPrint == TRUE) && ( (&mappa[i][j]) -> isInTopSoCell == TRUE )) {  colorPrintf(strTmp, BLACK, YELLOW); }/*se sono alla stampa finale, mostro la most frquented cell...*/
+                if ((finalPrint == TRUE) && ( mappa->matrice[i][j].isInTopSoCell == TRUE )) {  colorPrintf(strTmp, BLACK, YELLOW); }/*se sono alla stampa finale, mostro la most frquented cell...*/
                 else{ colorPrintf(strTmp, BLACK, WHITE);  } /*se non sono alla stampa finale allora devo solamente andare a stampare le srade bianche...*/
                 
-            } else if (( & mappa[i][j]) -> cellType == SOURCE) {
+            } else if (mappa->matrice[i][j].cellType == SOURCE) {
                 colorPrintf(strTmp, BLACK, MAGENTA);
             } else {
                 colorPrintf("       ", BLACK, BLACK);
@@ -444,7 +439,7 @@ void signalHandler(int signal){
 
 
 
-void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
+void searchForTopCells(struct grigliaCitta* mappa, int SO_TOP_CELL){
     int i,j;
     int maxValue, maxI, maxJ;
     int placedTopCell = 0;
@@ -458,8 +453,8 @@ void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
 
         for(i=0;i<SO_HEIGHT; i++){
             for(j=0;j<SO_WIDTH;j++){
-                if( ((&mappa[i][j]) -> cellType == ROAD) && ((&mappa[i][j])->isInTopSoCell == FALSE) && ((&mappa[i][j])->totalNumberOfTaxiPassedHere > maxValue)){
-                    maxValue = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
+                if( (mappa->matrice[i][j].cellType == ROAD) && (mappa->matrice[i][j].isInTopSoCell == FALSE) && (mappa->matrice[i][j].totalNumberOfTaxiPassedHere > maxValue)){
+                    maxValue = mappa->matrice[i][j].totalNumberOfTaxiPassedHere;
                     maxI = i;
                     maxJ = j;
                 }
@@ -467,7 +462,7 @@ void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
         }
 
         /*marco da stampare la cella a fine simulazione*/
-        (&mappa[maxI][maxJ])->isInTopSoCell = TRUE;
+        mappa->matrice[maxI][maxJ].isInTopSoCell = TRUE;
 
 
         SO_TOP_CELL--;
@@ -477,7 +472,7 @@ void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
 
 
 /*controllare qua dentro che mentre assegno il semaforo non ho errori e che non ho alcun tipo di problema! (errno)*/
-void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES ){
+void initMap(struct grigliaCitta* mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES ){
     
     int i, j;
 
@@ -489,29 +484,29 @@ void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_M
             /*inizialisso il semaforo con lo spazio creto a random tra SO_CAP_MIN e MAX*/
             do{
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
-                (&mappa[i][j])->availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL | 0600);  
+                mappa->matrice[i][j].availableSpace = semget(rand() % 12000 , 1, IPC_CREAT | IPC_EXCL | 0600);  
             } 
-            while((&mappa[i][j])->availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
+            while(mappa->matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
 
             /*imposto il valore del semaforo a un numero tra socap min e max*/
             if(SO_CAP_MAX > SO_CAP_MIN){ /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max < min*/
-                semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
+                semctl(mappa->matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
             }else{
-                semctl((&mappa[i][j]) -> availableSpace, 1, SETVAL, SO_CAP_MIN);
+                semctl(mappa->matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN);
             }
             
 
-            (&mappa[i][j]) -> taxiOnThisCell = 0;
-            (&mappa[i][j]) -> totalNumberOfTaxiPassedHere = 0;
+            mappa->matrice[i][j].taxiOnThisCell = 0;
+            mappa->matrice[i][j].totalNumberOfTaxiPassedHere = 0;
 
             if(SO_TIMENSEC_MAX > SO_TIMENSEC_MIN){ /*con questo evito errori di divisioni per 0*/
-                (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN + (rand()% (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN));
+                mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN + (rand()% (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN));
             }else{
-                (&mappa[i][j]) -> timeRequiredToCrossCell = SO_TIMENSEC_MIN;
+                mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN;
             }
             
 
-            (&mappa[i][j]) -> isInTopSoCell = FALSE;
+            mappa->matrice[i][j].isInTopSoCell = FALSE;
 
         }
     }
