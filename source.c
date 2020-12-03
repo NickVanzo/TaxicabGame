@@ -1,5 +1,4 @@
 #include "include_main.h"
-#include "msgQueue.key" /*File utilizzato per condividere la chiave di accesso alla coda di messaggi*/
 /*
 	Il processo deve essere in grado di mandare messaggi in una coda di messaggi
 	I messaggi verranno poi letti e consumati dai processi lettori taxi
@@ -13,16 +12,19 @@ void handle_signal(int signal, );
 void main(int argc, char * argv[]) {
 	/*Ancora non c'e' la memoria condivisa ma suppongo di avere accesso alla memoria e di avere quindi accesso alla griglia*/
 	int i,j,k; /*Variabili iteratrici*/
-	struct msgbuf my_msg;
-	int queue_ID;
-	int pid, status;
-	int time_Needed;
-	struct sigaction sa;
-	int seed_Time;
-	Key_t key;
+	struct msgbuf my_msg; /*Struttua del messaggio da inviare nella coda di messaggi*/
+	int queue_ID; /*ID della coda di messaggi*/
+	int pid;
+	struct sigaction sa; /*Struttura per impostare il nuovo handler*/
+	Key_t key; /*Chiave per accedere alla coda di messaggi*/
+	int shm_id; /*ID della memoria condivisa*/
 
 	map_cell **mappa; /*Copia provvisoria della mappa, da modificare appena si fa la memoria condivisa*/
 	map_cell *sources[SO_SOURCES]; /*Array contenente puntatori alle celle SO_SOURCES*/
+
+	shm_id = shmget(IPC_PRIVATE, sizeof(map_cell **mappa)*(SO_WIDTH*SO_SOURCES), 0600);
+	/*Attach la memoria condivisa ad un puntatore, il flag e' settato a RDONLY perche' non devo scrivere in memoria ma solo trovare le celle da aggiungere a sources*/
+	mappa = shmat(shm_id, NULL, SHM_RDONLY);
 
 	/*Inizializzazione della struct sigaction con relativo assegnamento del nuovo handler*/
 	bzero(&sa, sizeof(sa));
@@ -68,7 +70,10 @@ void main(int argc, char * argv[]) {
  	i++;
  	}
 
- 	/*PROBLEMA: cosa succede se non tutti i figli sono riusciti a terminare entro lo scadere del tempo di gioco? Ragionarci su*/
+	/*	
+ 		PROBLEMA: cosa succede se non tutti i figli sono riusciti a terminare entro lo scadere del tempo di gioco? Ragionarci su
+ 		PROBLEMA2: i processi passano a running anche se ricevono segnali diversi da SIGALRM, procedere con mask? Cambiare strategia?
+ 	*/
  	while(wait(NULL) != -1) { /*Aspetto che tutti i figli abbiano terminato, volevo farlo con waitpid ma e' tardi e sono stanco (la modifico domani)*/
  		#ifdef 0
  			fprintf(stdout, "Un figlio e' terminato!");

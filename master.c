@@ -62,19 +62,34 @@ boolean exitFromProgram;
 */
 void signalHandler(int signal);
 
+/*
+    funzione che genera la coda di messaggi prodotti da SO_SOURCES e consumati dai taxi
+    La funzione ritorna un intero, ossia l'ID della coda di messaggi. Potrei ottenerlo direttamente nel main(l'id) ma preferisco 
+    sporcarlo il meno possibile. La chiave viene generata nel main e passata come parametro alla funzione
+*/
+
+int setupQueue(int SO_SOURCES, key_t key);
+
 
 
 int main(int argc, char *argv[]){
     int i,j; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION; /*parametri letti o inseriti a compilazione*/
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
-    
+    key_t key;
+    int queue_id;
 
 
     map_cell **mappa;
     
-
+    /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
     exitFromProgram = FALSE;
+
+    /*Ottengo la chiave per la coda di messaggi*/
+    key = ftok("msgQueue.key", '1');
+
+    /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
+    queue_id = setupQueue(SO_SOURCES, key);
 
     /*imposto handler segnale timer*/
     signal(SIGALRM, signalHandler);
@@ -128,7 +143,7 @@ int main(int argc, char *argv[]){
         free(mappa[i]);
     }
     free(mappa);
-
+    msgctl(queue_id, IPC_RMID, NULL);
    return 0;
 }
 
@@ -494,4 +509,14 @@ void initMap(map_cell **mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_M
         }
     }
 
+}
+
+int setupQueue(int SO_SOURCES, key_t key) {
+    int queue_id;
+
+    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
+        fprintf(strerr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
+    }
+
+    return queue_id;
 }
