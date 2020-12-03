@@ -78,6 +78,7 @@ int main(int argc, char *argv[]){
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
     key_t key;
     int queue_id;
+    int shmId, shmKey;
 
 
     map_cell **mappa;
@@ -88,8 +89,9 @@ int main(int argc, char *argv[]){
     /*Ottengo la chiave per la coda di messaggi*/
     key = ftok("msgQueue.key", 1);
 
-    /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
+    /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda
     queue_id = setupQueue(SO_SOURCES, key);
+    */
 
     /*imposto handler segnale timer*/
     signal(SIGALRM, signalHandler);
@@ -106,13 +108,21 @@ int main(int argc, char *argv[]){
     for(i=0;i<6;i++) mapStats[i] = 0;
     
 
-    /*creo lo spazio della matrice nello heap--DA CAMBIARE A SHMMEM*/
+    /*creo lo spazio della matrice nella memoria condivisa*/
+    shmKey=ftok("msgQueue.key", 2);
+    shmId = shmget(shmKey, SO_HEIGHT * SO_WIDTH * sizeof(map_cell), IPC_CREAT | IPC_EXCL | 0600); /*creo lo spazio dell'area condivisa*/
+    mappa = (map_cell **) shmat(shmId, NULL, 0);
+
+
+    /*
     mappa = (map_cell **) malloc(SO_HEIGHT*sizeof(map_cell*));
     for(i=0;i<SO_HEIGHT;i++){
         mappa[i] = (map_cell *) malloc(SO_WIDTH*sizeof(map_cell));
     }
+    */
 
-    
+ 
+
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
     /*NICK METTI FORK PER CREARE so_source*/
@@ -136,17 +146,11 @@ int main(int argc, char *argv[]){
     stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
-    for(i=0;i<SO_HEIGHT; i++){
-        for(j=0;j<SO_WIDTH; j++){
-            semctl((&mappa[i][j])->availableSpace, 0, IPC_RMID);
-        }
-    }
-    for(i=0;i<SO_HEIGHT;i++){
-        free(mappa[i]);
-    }
-    free(mappa);
+   
+
+
     msgctl(queue_id, IPC_RMID, NULL);
-    
+
    return 0;
 }
 
@@ -454,7 +458,7 @@ void searchForTopCells(map_cell **mappa, int SO_TOP_CELL){
 
         for(i=0;i<SO_HEIGHT; i++){
             for(j=0;j<SO_WIDTH;j++){
-                if( ((&mappa[i][j])->isInTopSoCell == FALSE) && ((&mappa[i][j])->totalNumberOfTaxiPassedHere > maxValue)){
+                if( ((&mappa[i][j]) -> cellType == ROAD) && ((&mappa[i][j])->isInTopSoCell == FALSE) && ((&mappa[i][j])->totalNumberOfTaxiPassedHere > maxValue)){
                     maxValue = (&mappa[i][j])->totalNumberOfTaxiPassedHere;
                     maxI = i;
                     maxJ = j;
@@ -518,7 +522,8 @@ int setupQueue(int SO_SOURCES, key_t key) {
     int queue_id;
 
     if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
-        fprintf(strerr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
+        fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
+        exit(EXIT_FAILURE);
     }
 
     return queue_id;
