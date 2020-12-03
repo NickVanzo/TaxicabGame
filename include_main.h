@@ -60,6 +60,11 @@
     #include <errno.h>
 #endif
 
+#ifndef INCLUDE_SHM
+    #define INCLUDE_SHM
+    #include <sys/shm.h>
+#endif
+
 
 #ifndef DEFINES
     #define DEFINES
