@@ -17,21 +17,19 @@ int queue_ID; /*ID della coda di messaggi*/
 int numberOfSources, soDuration;
 
 int main(int argc, char * argv[]) {
-	/*Ancora non c'e' la memoria condivisa ma suppongo di avere accesso alla memoria e di avere quindi accesso alla griglia*/
 	int i,j,k; /*Variabili iteratrici*/
-	/*Inizializzo SO_SOURCE lo prendo dai parametri lo converto ad intero, faccio una malloc con dimensione mapCell*SO_SOURCE*/
 	int pid;
 	int shmKey, msgQeueueKey;
 	struct sigaction sa;
 	sigset_t my_mask;
 	numberOfSources = atoi(argv[2]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
-	soDuration = atoi(argv[9]); 
+	soDuration = atoi(argv[10]); 
+
 
 	/*Inizializzazione maschera*/
+	bzero(&sa, sizeof(sa));
 	sigfillset(&my_mask);
 	sigdelset(&my_mask, SIGALRM);   
-
-	bzero(&sa, sizeof(sa));
 	sa.sa_mask = my_mask;
 	sa.sa_handler = handle_signal;
 	sigaction(SIGALRM, &sa, NULL);
@@ -59,6 +57,9 @@ int main(int argc, char * argv[]) {
 				fprintf(stderr, "PID: [%d]\nErrore: %s", getpid(), strerror(errno));
 				break;
 			case 0:
+			my_msg.xDest = rand()%SO_WIDTH; /*Genero randomicamente una coordinata x*/
+				my_msg.yDest = rand()%SO_HEIGHT; /*Genero randomicamente una coordinata y*/
+				msgsnd(queue_ID, &my_msg, sizeof(int)*2 - sizeof(long), 0);
 				alarm(rand()%soDuration+1); /*Dico al SO di mandarmi un segnale SIGALRM dopo un numero casuale di secondi*/
 				pause(); /*Resto in attesa di un segnale, quello che mi interessa e' SIGALRM, cosi' parte l'handler e mando un messaggio in coda*/
 				exit(EXIT_SUCCESS);

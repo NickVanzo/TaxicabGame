@@ -93,6 +93,7 @@ int main(int argc, char *argv[]){
         shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
     }
 
+    /*Creazione coda di messaggi*/
 
 
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
@@ -101,8 +102,6 @@ int main(int argc, char *argv[]){
         printf("Error at shmat! error code is %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
-
-    /*map_cell **mappa;*/
     
     /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
     exitFromProgram = FALSE;
@@ -110,10 +109,9 @@ int main(int argc, char *argv[]){
     /*Ottengo la chiave per la coda di messaggi*/
     key = ftok("msgQueue.key", 1);
 
-    /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda
+    /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
     queue_id = setupQueue(SO_SOURCES, key);
-    */
-
+ 
     /*imposto handler segnale timer*/
     signal(SIGALRM, signalHandler);
     
@@ -566,7 +564,7 @@ void initMap(struct grigliaCitta* mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_
 int setupQueue(int SO_SOURCES, key_t key) {
     int queue_id;
 
-    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
+    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0666) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
