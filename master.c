@@ -387,18 +387,18 @@ void stampaStatistiche(struct grigliaCitta* mappa, int *statistiche, boolean fin
     
 
     /*creo le stringhe da stampare*/
-    sprintf(stats[0], "%s", " |\e[33m Statistics for running simulation \e[39m");
+    sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
     sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
     sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
     sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
-    sprintf(stats[7], "%s", " |\e[33m Colours legend: \e[39m");
-    sprintf(stats[8], "%s", " | \e[40m  \e[49m -> Black shows blocked zones");
-    sprintf(stats[9], "%s", " | \e[45m  \e[49m -> Magenta shows source points");
-    sprintf(stats[10], "%s", " | \e[107m  \e[49m -> White shows roads");
-    sprintf(stats[11], "%s", " | \e[43m  \e[49m -> Yellow shows SO_TOP_CELLS (only final print)");
+    sprintf(stats[7], "%s", " |\033[33m Colours legend: \033[39m");
+    sprintf(stats[8], "%s", " | \033[40m  \033[49m -> Black shows blocked zones");
+    sprintf(stats[9], "%s", " | \033[45m  \033[49m -> Magenta shows source points");
+    sprintf(stats[10], "%s", " | \033[107m  \033[49m -> White shows roads");
+    sprintf(stats[11], "%s", " | \033[43m  \033[49m -> Yellow shows SO_TOP_CELLS (only final print)");
     
     for(k=0;k<2;k++, printedStats++){ /*stampo il bordo superiore*/
         for(i=0;i<SO_WIDTH+2;i++)  colorPrintf("       ", GRAY, GRAY);

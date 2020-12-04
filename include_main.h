@@ -61,12 +61,6 @@
     #include <sys/shm.h>
 #endif
 
-/*messa solo per potere fare del debug o comunque non avere errori dall'ide*/
-#ifndef INCLUDE_TIME
-    #define INCLUDE_TIME
-    #include <time.h>
-#endif
-
 
 #ifndef DEFINES
     #define DEFINES
@@ -79,28 +73,28 @@
 
 #ifndef COLORS_SCHEME
     #define COLORS_SCHEME
-    #define C_DEFAULT "\e[39m"
-    #define C_BLACK "\e[30m"
-    #define C_RED  "\e[31m"
-    #define C_GREEN "\e[32m"
-    #define C_YELLOW "\e[33m"
-    #define C_BLUE "\e[34m"
-    #define C_MAGENTA "\e[35m"
-    #define C_CYAN "\e[36m"
-    #define C_GRAY "\e[37m"
-    #define C_WHITE "\e[97m"
+    #define C_DEFAULT "\033[39m"
+    #define C_BLACK "\033[30m"
+    #define C_RED  "\033[31m"
+    #define C_GREEN "\033[32m"
+    #define C_YELLOW "\033[33m"
+    #define C_BLUE "\033[34m"
+    #define C_MAGENTA "\033[35m"
+    #define C_CYAN "\033[36m"
+    #define C_GRAY "\033[37m"
+    #define C_WHITE "\033[97m"
 
 
-    #define BG_C_DEFAULT "\e[49m"
-    #define BG_C_BLACK "\e[40m"
-    #define BG_C_RED  "\e[41m"
-    #define BG_C_GREEN "\e[42m"
-    #define BG_C_YELLOW "\e[43m"
-    #define BG_C_BLUE "\e[44m"
-    #define BG_C_MAGENTA "\e[45m"
-    #define BG_C_CYAN "\e[46m"
-    #define BG_C_GRAY "\e[100m"
-    #define BG_C_WHITE "\e[107m"
+    #define BG_C_DEFAULT "\033[49m"
+    #define BG_C_BLACK "\033[40m"
+    #define BG_C_RED  "\033[41m"
+    #define BG_C_GREEN "\033[42m"
+    #define BG_C_YELLOW "\033[43m"
+    #define BG_C_BLUE "\033[44m"
+    #define BG_C_MAGENTA "\033[45m"
+    #define BG_C_CYAN "\033[46m"
+    #define BG_C_GRAY "\033[100m"
+    #define BG_C_WHITE "\033[107m"
 #endif
 
 
