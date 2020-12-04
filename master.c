@@ -139,6 +139,14 @@ int main(int argc, char *argv[]){
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
    
     shmdt(mappa);
+
+    for(i=0;i<SO_HEIGHT, i++){
+        for(j=0;j<SO_WIDTH;j++){
+            semctl(mappa->matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
+        }
+    }
+
+
     shmctl(shmKey, IPC_RMID, NULL);
 
     msgctl(queue_id, IPC_RMID, NULL);
