@@ -19,10 +19,6 @@
 #endif
 
 
-#ifndef INCLUDE_COLORS
-    #define INCLUDE_COLORS
-    #include "./include_files/colors/colors.h"
-#endif
 
 #ifndef INCLUDE_UNISTD
     #define INCLUDE_UNISTD
@@ -81,14 +77,31 @@
 
 #endif
 
+#ifndef COLORS_SCHEME
+    #define COLORS_SCHEME
+    #define C_DEFAULT "\e[39m"
+    #define C_BLACK "\e[30m"
+    #define C_RED  "\e[31m"
+    #define C_GREEN "\e[32m"
+    #define C_YELLOW "\e[33m"
+    #define C_BLUE "\e[34m"
+    #define C_MAGENTA "\e[35m"
+    #define C_CYAN "\e[36m"
+    #define C_GRAY "\e[37m"
+    #define C_WHITE "\e[97m"
 
-/*POICHE QUESTO HEADER FA RIFERIMENTO A ALTRI TIPI DI DATO DI TIPO STANDARD, DEVE ESSERE INCLUSO PER ULTIMO! (TIPO IL TIME NELLA STRUCT DELLA CELLA!*/
-#ifndef INCLUDE_CUSTOM_DATA_TYPES
-    #define INCLUDE_CUSTOM_DATA_TYPES
-    #include "./include_files/custom_data_types/custom_data_types.h" 
+
+    #define BG_C_DEFAULT "\e[49m"
+    #define BG_C_BLACK "\e[40m"
+    #define BG_C_RED  "\e[41m"
+    #define BG_C_GREEN "\e[42m"
+    #define BG_C_YELLOW "\e[43m"
+    #define BG_C_BLUE "\e[44m"
+    #define BG_C_MAGENTA "\e[45m"
+    #define BG_C_CYAN "\e[46m"
+    #define BG_C_GRAY "\e[100m"
+    #define BG_C_WHITE "\e[107m"
 #endif
-
-
 
 
 /*tipo di dato booleano*/
@@ -133,6 +146,9 @@ struct grigliaCitta{
     map_cell matrice[SO_HEIGHT][SO_WIDTH];
 }; 
 
+
+
+
 #ifndef DEFINE_CUSTOM_FUNCTIONS
     #define DEFINE_CUSTOM_FUNCTIONS
     /*qua dentro definiamo tutti i prototipi delle funzioni che andiamo a scrivere*/
@@ -143,7 +159,7 @@ struct grigliaCitta{
     */
     void colorPrintf(char *message, enum color colore, enum color bgcolore);
 
-    int pointToID(struct grigliaCitta* mappa, int x, int y);
+    int pointToID(struct grigliaCitta* mappa, int x, int y, int SO_SOURCES);
 
 
 

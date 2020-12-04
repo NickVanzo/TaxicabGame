@@ -81,9 +81,10 @@ int main(int argc, char *argv[]){
 
     /*Variabili per memoria condivisa*/
     struct grigliaCitta* mappa;
-    /*Prima cosa, creo questa dio merda di memoria condivisa*/
-    shmKey = shmget(IPC_PRIVATE, sizeof(struct grigliaCitta), 0600);
-    mappa = shmat(shmKey, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
+    /*Prima cosa, creo memoria condivisa*/
+    shmKey = ftok("msgQueue.key", 2);
+    shmId = shmget(shmKey, sizeof(struct grigliaCitta), 0600);
+    mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
 
     /*map_cell **mappa;*/
     
@@ -111,14 +112,6 @@ int main(int argc, char *argv[]){
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
     
-
-    /*
-    mappa = (map_cell **) malloc(SO_HEIGHT*sizeof(map_cell*));
-    for(i=0;i<SO_HEIGHT;i++){
-        mappa[i] = (map_cell *) malloc(SO_WIDTH*sizeof(map_cell));
-    }
-    */
-
  
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);

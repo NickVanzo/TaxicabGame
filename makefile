@@ -1,26 +1,26 @@
 CC = gcc -std=c89 
 
-run: master taxi control
+run: master taxi
 	./master
 
-master: master.o colors.o control taxi
-	$(CC) master.o colors.o -o master
+master: master.o utils.o taxi
+	$(CC) master.o utils.o -o master
 
-control: control.o colors.o 
-	$(CC) control.o colors.o -o control
 
 taxi: taxi.o 	
 	$(CC) taxi.o -o taxi
 
+source: source.o
+	$(CC) -c source.c -o source.o
 
 master.o: master.c
 	$(CC) -c master.c -o master.o
 
-colors.o: include_files/colors/colors.c include_files/colors/colors.h
-	$(CC) -c include_files/colors/colors.c -o colors.o
+utils.o: utils.c
+	$(CC) -c utils.c -o utils.o
 
 
 clear:
 	rm *.o
-	rm taxi control master
+	rm taxi master
 
