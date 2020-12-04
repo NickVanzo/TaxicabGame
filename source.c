@@ -7,61 +7,56 @@
 /*
 	Funzione usata per gestire segnali
 */
-void handle_signal(int signal);
+void handle_signal(int signum);
 
 /*TI HO TOLTO IL SECONDO PARAMETRO PECHè HANDLE SIGNAL RICHIEDE AL MAZ 1 SIGNAL tutte le var che vuoi accedre dall'handler devono essere glibali!*/
 struct msgBuf my_msg; /*Struttua del messaggio da inviare nella coda di messaggi*/ /*DEVE ESSERE GLOBALE SE LA VUOI ACCEDERE DA HANDLE SIGNAL!*/
 struct grigliaCitta* mappa;
 int queue_ID; /*ID della coda di messaggi*/
-int SO_SOURCES;
-
-
+int numberOfSources, soDuration;
 
 void main(int argc, char * argv[]) {
 	/*Ancora non c'e' la memoria condivisa ma suppongo di avere accesso alla memoria e di avere quindi accesso alla griglia*/
 	int i,j,k; /*Variabili iteratrici*/
-	
-	
+	/*Inizializzo SO_SOURCE lo prendo dai parametri lo converto ad intero, faccio una malloc con dimensione mapCell*SO_SOURCE*/
 	int pid;
-	struct sigaction sa; /*Struttura per impostare il nuovo handler*/
 	int shmKey, msgQeueueKey;
-	int shm_id; /*ID della memoria condivisa*/
-    int SO_DURATION; 
-
+	struct sigaction sa;
+	numberOfSources = atoi(argv[2]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
+	soDuration = atoi(argv[9]); 
 
 	/*Variabili per memoria condivisa*/
     struct grigliaCitta* mappa;
+	int shm_id; /*ID della memoria condivisa*/
 
     /*PROBLEMA SO_SOURCES VA PASSATO COME PARAMETRO ALTRIMETNI NON FUNZIONA. MA QUINDI SOURCES DEVE ESSERE ARRAY DINAMICO... QUICK FIX:*/ 
-    map_cell sources[SO_SOURCES]; /*Array contenente le celle SO_SOURCES*/
+    map_cell *sources; /*Array contenente le celle SO_SOURCES*/
 
 
+    sources = malloc(numberOfSources * sizeof(map_cell));    
 
     /*Prima cosa, creo memoria condivisa*/
     shmKey = ftok("msgQueue.key", 2);
-    shm_id = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
-    mappa = shmat(shm_id, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
-
-
-	
-
-	
-
+    shm_id = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT |  0600);
+    mappa = shmat(shm_id, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/    
 
 	/*Inizializzazione della struct sigaction con relativo assegnamento del nuovo handler*/
 	bzero(&sa, sizeof(sa));
 	sa.sa_handler = handle_signal;
 
+	sigaction(SIGALRM, &sa, NULL);	
 	/*Costruisco l'array contenente i SO_SOURCES processi*/
 	for(i=0; i < SO_WIDTH; i++) {
-		for(j=0; j < SO_HEIGHT; j++) {
-			if((mappa-> matrice[i][j]).cellType == SOURCE) {
+		for(j=0; j < SO_HEIGHT; j++) { 
+			if(mappa->matrice[i][j].cellType == SOURCE) {
 				/*Aggiungo la cella SOURCE all'array di SOURCES e incremento la variabile k per spostarmi nell'array delle SO_SOURCES*/
 				sources[k] = (mappa->matrice[i][j]); 
 				k++;
 			}
+				fprintf(stdout, "%d", mappa->matrice[i][j].cellType);
 		}
-	}
+	}	
+	
 
 	/*Ora conosco le coordinate delle SO_SOURCES celle, comincio a costruire il messaggio da mandare in coda*/
 	/*Ottengo la chiave della coda di messaggi*/
@@ -76,13 +71,13 @@ void main(int argc, char * argv[]) {
 
 	i = 0;
 	/*Creo SO_SOURCES processi che immetterano SO_SOURCES messaggi nelle celle SOURCES*/
-	while(i < SO_SOURCES) {
+	while(i < numberOfSources) {
 		switch(pid = fork()) {
 			case -1:
 				fprintf(stderr, "PID: [%d]\nErrore: %s", getpid(), strerror(errno));
 				break;
 			case 0:
-				alarm(rand()%SO_DURATION+1); /*Dico al SO di mandarmi un segnale SIGALRM dopo un numero casuale di secondi*/
+				alarm(rand()%soDuration+1); /*Dico al SO di mandarmi un segnale SIGALRM dopo un numero casuale di secondi*/
 				pause(); /*Resto in attesa di un segnale, quello che mi interessa e' SIGALRM, cosi' parte l'handler e mando un messaggio in coda*/
 				exit(EXIT_SUCCESS);
 			default: 
@@ -102,13 +97,14 @@ void main(int argc, char * argv[]) {
  	}
 }
 
-void signalHandler(int signal) {
+void handle_signal(int signum) {
 	srand(getpid());
-	switch(signal) {
+	switch(signum) {
 		case SIGALRM:
+			fprintf(stdout, "sono dentro");
 			srand(getpid()); /*Non so se sia necessario in quanto c'e' gia' nel main ma nel dubbio lo metto*/
 			/*Il figlio deve mandare un messaggio nella coda di messaggi*/
-			my_msg.mtype = rand()%SO_SOURCES+1; /*Il tipo di messaggio riguarda quale delle celle SOURCE fara' richiesta*/
+			my_msg.mtype = rand()%numberOfSources+1; /*Il tipo di messaggio riguarda quale delle celle SOURCE fara' richiesta*/
 			do {
 				my_msg.xDest = rand()%SO_WIDTH; /*Genero randomicamente una coordinata x*/
 				my_msg.yDest = rand()%SO_HEIGHT; /*Genero randomicamente una coordinata y*/
