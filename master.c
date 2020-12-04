@@ -146,7 +146,7 @@ int main(int argc, char *argv[]){
 
     shmdt(mappa);
 
-    shmctl(shmKey, IPC_RMID, NULL);
+    shmctl(shmId, IPC_RMID, NULL);
 
     msgctl(queue_id, IPC_RMID, NULL);
 
