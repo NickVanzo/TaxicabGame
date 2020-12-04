@@ -82,9 +82,21 @@ int main(int argc, char *argv[]){
     /*Variabili per memoria condivisa*/
     struct grigliaCitta* mappa;
     /*Prima cosa, creo memoria condivisa*/
+
     shmKey = ftok("msgQueue.key", 2);
     shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
+
+    if(shmId == -1){ /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/
+        system("./cleanIpcs.sh");
+        shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
+    }
+
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
+
+    if(mappa == (struct grigliaCitta * )(-1)){
+        printf("Error at shmat! error code is %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 
     /*map_cell **mappa;*/
     
@@ -262,14 +274,14 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
     char tmpChar; /*per leggere eventuali input non desiderati*/
 
 
-     if(argc == 10){ /*CONTROLLARE PERCHè NON MI RICORDO BENE SE FUNZIONA COSì*/
+     if(argc == 11){ /*1 nome comando + 10 parametri*/
         *SO_TAXI = atoi(argv[1]);
         *SO_SOURCES = atoi(argv[2]);
         *SO_HOLES = atoi(argv[3]);
         *SO_CAP_MIN = atoi(argv[4]);
         *SO_CAP_MAX = atoi(argv[5]);
         *SO_TIMENSEC_MIN = atoi(argv[6]);
-        *SO_TIMENSEC_MIN = atoi(argv[7]);
+        *SO_TIMENSEC_MAX = atoi(argv[7]);
         *SO_TOP_CELLS = atoi(argv[8]);
         *SO_TIMEOUT = atoi(argv[9]);
         *SO_DURATION = atoi(argv[10]);
