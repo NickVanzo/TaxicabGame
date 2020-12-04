@@ -12,7 +12,7 @@ source: source.o
 taxi: taxi.o 	
 	$(CC) taxi.o -o taxi
 
-source: source.o
+source.o: source.o
 	$(CC) -c source.c -o source.o
 
 master.o: master.c
@@ -24,5 +24,5 @@ utils.o: utils.c
 
 clear:
 	rm *.o
-	rm taxi master
+	rm taxi master source
 
