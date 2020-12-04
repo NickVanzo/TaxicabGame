@@ -78,6 +78,8 @@ int main(int argc, char *argv[]){
     key_t key;
     int queue_id;
     int shmId, shmKey;
+    char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
+
 
     /*Variabili per memoria condivisa*/
     struct grigliaCitta* mappa;
@@ -121,6 +123,7 @@ int main(int argc, char *argv[]){
     /*avvio setup della simulazione*/
     setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, &SO_TOP_CELLS, &SO_TIMEOUT, &SO_DURATION ,argc, argv);
    
+
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
     
@@ -128,7 +131,40 @@ int main(int argc, char *argv[]){
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
-    /*NICK METTI FORK PER CREARE so_source*/
+
+    /*preparo i parametri da mandare come argomenti alla execlp*/
+    sprintf(SO_TAXI_PARAM, "%d", SO_TAXI);
+    sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
+    sprintf(SO_HOLES_PARAM, "%d", SO_HOLES);
+    sprintf(SO_CAP_MIN_PARAM, "%d", SO_CAP_MIN);
+    sprintf(SO_CAP_MAX_PARAM, "%d", SO_CAP_MAX);
+    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
+    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
+    sprintf(SO_TOP_CELLS_PARAM, "%d", SO_TOP_CELLS);
+    sprintf(SO_TIMEOUT_PARAM, "%d", SO_TIMEOUT);
+    sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
+
+
+    /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
+    for(i=0;i<SO_SOURCES; i++){
+        switch(fork()){
+            case -1:
+                printf("Error while trying to fork()! %s\n", strerror(errno));
+                exit(EXIT_FAILURE);
+                break;
+
+            case 0:
+                /*cambio il programma in esecuzione*/
+                execlp("source", "source", SO_TAXI_PARAM, SO_SOURCES_PARAM, SO_HOLES_PARAM, SO_CAP_MIN_PARAM, SO_CAP_MAX_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, SO_TOP_CELLS_PARAM, SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+                printf("Error loading new program %s!\n\n", strerror(errno));
+                exit(EXIT_FAILURE);
+                break;
+
+            default:
+                break;
+
+        }
+    }
 
     /*imposto durata simulazione*/
     alarm(SO_DURATION);

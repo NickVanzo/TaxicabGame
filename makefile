@@ -1,11 +1,13 @@
 CC = gcc -std=c89 
 
-run: master taxi
+run: master taxi source
 	./master
 
 master: master.o utils.o taxi
 	$(CC) master.o utils.o -o master
 
+source: source.o
+	$(CC) source.o -o source
 
 taxi: taxi.o 	
 	$(CC) taxi.o -o taxi
