@@ -137,15 +137,14 @@ int main(int argc, char *argv[]){
     stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
-   
-    shmdt(mappa);
-
-    for(i=0;i<SO_HEIGHT, i++){
+    for(i=0;i<SO_HEIGHT; i++){
         for(j=0;j<SO_WIDTH;j++){
             semctl(mappa->matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
         }
     }
 
+
+    shmdt(mappa);
 
     shmctl(shmKey, IPC_RMID, NULL);
 
