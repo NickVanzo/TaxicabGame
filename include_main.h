@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+
+
 #ifndef INCLUDE_STDIO
     #define INCLUDE_STDIO
     #include <stdio.h>

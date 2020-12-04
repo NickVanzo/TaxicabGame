@@ -1,6 +1,6 @@
 CC = gcc -std=c89 -pedantic
 
-run: master taxi
+run: master taxi source
 	./master
 
 master: master.o utils.o taxi

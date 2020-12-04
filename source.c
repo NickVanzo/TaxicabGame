@@ -1,3 +1,4 @@
+
 #include "include_main.h"
 /*
 	Il processo deve essere in grado di mandare messaggi in una coda di messaggi
@@ -15,48 +16,29 @@ struct grigliaCitta* mappa;
 int queue_ID; /*ID della coda di messaggi*/
 int numberOfSources, soDuration;
 
-void main(int argc, char * argv[]) {
+int main(int argc, char * argv[]) {
 	/*Ancora non c'e' la memoria condivisa ma suppongo di avere accesso alla memoria e di avere quindi accesso alla griglia*/
 	int i,j,k; /*Variabili iteratrici*/
 	/*Inizializzo SO_SOURCE lo prendo dai parametri lo converto ad intero, faccio una malloc con dimensione mapCell*SO_SOURCE*/
 	int pid;
 	int shmKey, msgQeueueKey;
 	struct sigaction sa;
+	sigset_t my_mask;
 	numberOfSources = atoi(argv[2]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
 	soDuration = atoi(argv[9]); 
 
-	/*Variabili per memoria condivisa*/
-    struct grigliaCitta* mappa;
-	int shm_id; /*ID della memoria condivisa*/
+	/*Inizializzazione maschera*/
+	sigfillset(&my_mask);
+	sigdelset(&my_mask, SIGALRM);   
 
-    /*PROBLEMA SO_SOURCES VA PASSATO COME PARAMETRO ALTRIMETNI NON FUNZIONA. MA QUINDI SOURCES DEVE ESSERE ARRAY DINAMICO... QUICK FIX:*/ 
-    map_cell *sources; /*Array contenente le celle SO_SOURCES*/
-
-
-    sources = malloc(numberOfSources * sizeof(map_cell));    
-
-    /*Prima cosa, creo memoria condivisa*/
-    shmKey = ftok("msgQueue.key", 2);
-    shm_id = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT |  0600);
-    mappa = shmat(shm_id, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/    
-
-	/*Inizializzazione della struct sigaction con relativo assegnamento del nuovo handler*/
 	bzero(&sa, sizeof(sa));
+	sa.sa_mask = my_mask;
 	sa.sa_handler = handle_signal;
+	sigaction(SIGALRM, &sa, NULL);
 
-	sigaction(SIGALRM, &sa, NULL);	
-	/*Costruisco l'array contenente i SO_SOURCES processi*/
-	for(i=0; i < SO_WIDTH; i++) {
-		for(j=0; j < SO_HEIGHT; j++) { 
-			if(mappa->matrice[i][j].cellType == SOURCE) {
-				/*Aggiungo la cella SOURCE all'array di SOURCES e incremento la variabile k per spostarmi nell'array delle SO_SOURCES*/
-				sources[k] = (mappa->matrice[i][j]); 
-				k++;
-			}
-				fprintf(stdout, "%d", mappa->matrice[i][j].cellType);
-		}
-	}	
-	
+	for(i=0; i < NSIG; i++) {
+		signal(i, handle_signal);
+	} /*  Questa setta l'handler di default con la nostra funzione	*/
 
 	/*Ora conosco le coordinate delle SO_SOURCES celle, comincio a costruire il messaggio da mandare in coda*/
 	/*Ottengo la chiave della coda di messaggi*/
@@ -111,6 +93,10 @@ void handle_signal(int signum) {
 			} while((mappa-> matrice[my_msg.xDest][my_msg.yDest]).cellType == BLOCK || (mappa->matrice[my_msg.xDest][my_msg.yDest]).cellType == SOURCE);
 			/*La condizione per uscire dal ciclo e' che la cella selezionata come destinazione sia di tipo ROAD*/
 			msgsnd(queue_ID, &my_msg, sizeof(int)*2 - sizeof(long), 0);
+			break;
+
+			default:
+				pause(); /*Resto in attesa di un segnale, quello che mi interessa e' SIGALRM, cosi' parte l'handler e mando un messaggio in coda*/
 			break;
 	}
 }

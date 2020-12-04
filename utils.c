@@ -13,34 +13,6 @@
 	Il numero ritornato e' l'indice dell'array a cui siamo arrivati. Dato che hanno lo stesso ordine nell'array hanno lo stesso tipo di messaggio
 	Questa e' l'idea, verificare se funziona o meno. 
 */
-int pointToID(struct grigliaCitta * mappa, int x, int y, int SO_SOURCES) {
-
-	int i,j,k;/*Variabili iteratrici*/
-	map_cell sources[SO_SOURCES]; /*Array contenente le celle SOURCE*/
-
-	k=1;
-
-	for(i=0; i<SO_WIDTH;i++) {
-		for(j=0;j<SO_HEIGHT;j++) {
-			if(  mappa->matrice[i][j].cellType == SOURCE) {
-				/*Aggiungo la cella SOURCE all'array di SOURCES e incremento la variabile k per spostarmi nell'array delle SO_SOURCES*/
-				sources[k] = mappa->matrice[i][j]; 
-				k++;
-			}
-			if((i == x) && (j == y)) {
-				if( mappa->matrice[k][j].cellType != SOURCE) {
-					return -1;
-				} else {
-					return k;
-				}
-			}
-		}
-	}
-
-	return -1; /*La cella non e' stata trovata, aggiustare le coordinate richieste da terminale*/
-
-}
-
 
 
 

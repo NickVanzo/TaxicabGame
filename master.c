@@ -93,6 +93,8 @@ int main(int argc, char *argv[]){
         shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
     }
 
+
+
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
 
     if(mappa == (struct grigliaCitta * )(-1)){
@@ -155,7 +157,7 @@ int main(int argc, char *argv[]){
 
             case 0:
                 /*cambio il programma in esecuzione*/
-                execlp("source", "source", SO_TAXI_PARAM, SO_SOURCES_PARAM, SO_HOLES_PARAM, SO_CAP_MIN_PARAM, SO_CAP_MAX_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, SO_TOP_CELLS_PARAM, SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+                execlp("source", "source", SO_SOURCES_PARAM, SO_CAP_MIN_PARAM, SO_CAP_MAX_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, SO_TOP_CELLS_PARAM, SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
                 printf("Error loading new program %s!\n\n", strerror(errno));
                 exit(EXIT_FAILURE);
                 break;
