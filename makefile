@@ -12,7 +12,7 @@ source: source.o
 taxi: taxi.o 	
 	$(CC) taxi.o -o taxi
 
-source.o: source.o
+source.o: source.c
 	$(CC) -c source.c -o source.o
 
 master.o: master.c
