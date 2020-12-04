@@ -7,24 +7,46 @@
 /*
 	Funzione usata per gestire segnali
 */
-void handle_signal(int signal, );
+void handle_signal(int signal);
+
+/*TI HO TOLTO IL SECONDO PARAMETRO PECHè HANDLE SIGNAL RICHIEDE AL MAZ 1 SIGNAL tutte le var che vuoi accedre dall'handler devono essere glibali!*/
+struct msgBuf my_msg; /*Struttua del messaggio da inviare nella coda di messaggi*/ /*DEVE ESSERE GLOBALE SE LA VUOI ACCEDERE DA HANDLE SIGNAL!*/
+struct grigliaCitta* mappa;
+int queue_ID; /*ID della coda di messaggi*/
+int SO_SOURCES;
+
+
 
 void main(int argc, char * argv[]) {
 	/*Ancora non c'e' la memoria condivisa ma suppongo di avere accesso alla memoria e di avere quindi accesso alla griglia*/
 	int i,j,k; /*Variabili iteratrici*/
-	struct msgbuf my_msg; /*Struttua del messaggio da inviare nella coda di messaggi*/
-	int queue_ID; /*ID della coda di messaggi*/
+	
+	
 	int pid;
 	struct sigaction sa; /*Struttura per impostare il nuovo handler*/
-	Key_t key; /*Chiave per accedere alla coda di messaggi*/
+	int shmKey, msgQeueueKey;
 	int shm_id; /*ID della memoria condivisa*/
+    int SO_DURATION; 
 
-	map_cell **mappa; /*Copia provvisoria della mappa, da modificare appena si fa la memoria condivisa*/
-	map_cell sources[SO_SOURCES]; /*Array contenente le celle SO_SOURCES*/
 
-	shm_id = shmget(IPC_PRIVATE, sizeof(map_cell **mappa)*(SO_WIDTH*SO_SOURCES), 0600);
-	/*Attach la memoria condivisa ad un puntatore, il flag e' settato a RDONLY perche' non devo scrivere in memoria ma solo trovare le celle da aggiungere a sources*/
-	mappa = shmat(shm_id, NULL, SHM_RDONLY);
+	/*Variabili per memoria condivisa*/
+    struct grigliaCitta* mappa;
+
+    /*PROBLEMA SO_SOURCES VA PASSATO COME PARAMETRO ALTRIMETNI NON FUNZIONA. MA QUINDI SOURCES DEVE ESSERE ARRAY DINAMICO... QUICK FIX:*/ 
+    map_cell sources[SO_SOURCES]; /*Array contenente le celle SO_SOURCES*/
+
+
+
+    /*Prima cosa, creo memoria condivisa*/
+    shmKey = ftok("msgQueue.key", 2);
+    shm_id = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
+    mappa = shmat(shm_id, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
+
+
+	
+
+	
+
 
 	/*Inizializzazione della struct sigaction con relativo assegnamento del nuovo handler*/
 	bzero(&sa, sizeof(sa));
@@ -33,9 +55,9 @@ void main(int argc, char * argv[]) {
 	/*Costruisco l'array contenente i SO_SOURCES processi*/
 	for(i=0; i < SO_WIDTH; i++) {
 		for(j=0; j < SO_HEIGHT; j++) {
-			if((&mappa[i][j])->cellType == SOURCE) {
+			if((mappa-> matrice[i][j]).cellType == SOURCE) {
 				/*Aggiungo la cella SOURCE all'array di SOURCES e incremento la variabile k per spostarmi nell'array delle SO_SOURCES*/
-				sources[k] = (&mappa[i][j]); 
+				sources[k] = (mappa->matrice[i][j]); 
 				k++;
 			}
 		}
@@ -43,10 +65,10 @@ void main(int argc, char * argv[]) {
 
 	/*Ora conosco le coordinate delle SO_SOURCES celle, comincio a costruire il messaggio da mandare in coda*/
 	/*Ottengo la chiave della coda di messaggi*/
-	key = ftok("msgQueue.key", 1);
+	msgQeueueKey = ftok("msgQueue.key", 1);
 
 	/*Ottengo l'ID della coda di messaggi*/
-	if(queue_ID = msgget(key, IPC_CREAT) == -1) {
+	if(queue_ID = msgget(msgQeueueKey, IPC_CREAT) == -1) {
 		fprintf(stderr, "%s\n", strerror(errno));
 	}
 
@@ -76,13 +98,11 @@ void main(int argc, char * argv[]) {
                         -> usa sigprocmask()
  	*/
  	while(wait(NULL) != -1) { /*Aspetto che tutti i figli abbiano terminato, volevo farlo con waitpid ma e' tardi e sono stanco (la modifico domani)*/
- 		#ifdef 0
- 			fprintf(stdout, "Un figlio e' terminato!");
- 		#endif
+ 		
  	}
 }
 
-void signalHandler(int signal, struct msgbuf my_msg) {
+void signalHandler(int signal) {
 	srand(getpid());
 	switch(signal) {
 		case SIGALRM:
@@ -92,7 +112,7 @@ void signalHandler(int signal, struct msgbuf my_msg) {
 			do {
 				my_msg.xDest = rand()%SO_WIDTH; /*Genero randomicamente una coordinata x*/
 				my_msg.yDest = rand()%SO_HEIGHT; /*Genero randomicamente una coordinata y*/
-			} while((&mappa[my_msg.xDest][my_msg.yDest])->cellType == BLOCK || (&mappa[my_msg.xDest][my_msg.yDest])->cellType == SOURCE);
+			} while((mappa-> matrice[my_msg.xDest][my_msg.yDest]).cellType == BLOCK || (mappa->matrice[my_msg.xDest][my_msg.yDest]).cellType == SOURCE);
 			/*La condizione per uscire dal ciclo e' che la cella selezionata come destinazione sia di tipo ROAD*/
 			msgsnd(queue_ID, &my_msg, sizeof(int)*2 - sizeof(long), 0);
 			break;

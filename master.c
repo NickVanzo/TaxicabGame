@@ -83,7 +83,7 @@ int main(int argc, char *argv[]){
     struct grigliaCitta* mappa;
     /*Prima cosa, creo memoria condivisa*/
     shmKey = ftok("msgQueue.key", 2);
-    shmId = shmget(shmKey, sizeof(struct grigliaCitta), 0600);
+    shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
 
     /*map_cell **mappa;*/
