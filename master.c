@@ -102,6 +102,7 @@ int main(int argc, char *argv[]){
     }
 
 
+    
 
     
     
@@ -111,7 +112,10 @@ int main(int argc, char *argv[]){
     key = ftok("msgQueue.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
-    queue_id = setupQueue(SO_SOURCES, key);
+    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
+        fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
  
     /*imposto handler segnale timer*/
     signal(SIGALRM, signalHandler);
@@ -136,15 +140,8 @@ int main(int argc, char *argv[]){
     createdChildSources = malloc(SO_SOURCES * sizeof(int));
 
     /*preparo i parametri da mandare come argomenti alla execlp*/
-    sprintf(SO_TAXI_PARAM, "%d", SO_TAXI);
+
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
-    sprintf(SO_HOLES_PARAM, "%d", SO_HOLES);
-    sprintf(SO_CAP_MIN_PARAM, "%d", SO_CAP_MIN);
-    sprintf(SO_CAP_MAX_PARAM, "%d", SO_CAP_MAX);
-    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
-    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
-    sprintf(SO_TOP_CELLS_PARAM, "%d", SO_TOP_CELLS);
-    sprintf(SO_TIMEOUT_PARAM, "%d", SO_TIMEOUT);
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
 
 
@@ -158,7 +155,7 @@ int main(int argc, char *argv[]){
 
             case 0:
                 /*cambio il programma in esecuzione*/
-                execlp("./source", "./source", SO_SOURCES_PARAM, SO_CAP_MIN_PARAM, SO_CAP_MAX_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, SO_TOP_CELLS_PARAM, SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+                execlp("./source", "./source", SO_SOURCES_PARAM, SO_DURATION_PARAM, NULL);
                 printf("Error loading new program %s!\n\n", strerror(errno));
                 exit(EXIT_FAILURE);
                 break;
@@ -194,8 +191,7 @@ int main(int argc, char *argv[]){
     /*killo tutti i processi*/
     for(i=0;i<SO_SOURCES;i++){
         if(kill(createdChildSources[i], SIGKILL)==-1){
-            printf("Error killink child %d. error is: %s\nmake
-            ", createdChildSources[i], strerror(errno));
+            printf("Error killink child %d. error is: %s\n", createdChildSources[i], strerror(errno));
         }
     }
 
@@ -579,7 +575,7 @@ void initMap(struct grigliaCitta* mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_
 int setupQueue(int SO_SOURCES, key_t key) {
     int queue_id;
 
-    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0666) == -1) {
+    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }

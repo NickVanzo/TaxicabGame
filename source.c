@@ -22,14 +22,14 @@ int main(int argc, char * argv[]) {
 	int shmKey, msgQeueueKey;
 	struct sigaction sa;
 	sigset_t my_mask;
-	numberOfSources = atoi(argv[2]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
-	soDuration = atoi(argv[10]); 
+	numberOfSources = atoi(argv[1]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
+	soDuration = atoi(argv[2]); 
 
 
 	/*Inizializzazione maschera*/
 	bzero(&sa, sizeof(sa));
 	sigfillset(&my_mask);
-    
+
 	sigdelset(&my_mask, SIGALRM); 
     sigdelset(&my_mask, SIGKILL); 
     sigdelset(&my_mask, SIGTERM);   
