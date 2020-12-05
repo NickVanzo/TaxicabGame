@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
     key_t key;
     int queue_id;
     int shmId, shmKey;
- 
+    int *childSourceCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
 
 
@@ -117,6 +117,9 @@ int main(int argc, char *argv[]){
     /*avvio setup della simulazione*/
     setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, &SO_TOP_CELLS, &SO_TIMEOUT, &SO_DURATION ,argc, argv);
    
+    /*creo array contenente i pid dei figli source creati*/
+    childSourceCreated = malloc(SO_SOURCES * sizeof(int));
+
 
     /*per debug solo DA TOGLIERE*/
     for(i=0;i<6;i++) mapStats[i] = 0;
@@ -134,7 +137,8 @@ int main(int argc, char *argv[]){
 
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
     for(i=0;i<SO_SOURCES; i++){
-        switch(fork()){
+        childSourceCreated[i] = fork();
+        switch(childSourceCreated[i]){
             case -1:
                 printf("Error while trying to fork()! %s\n", strerror(errno));
                 exit(EXIT_FAILURE);
@@ -142,7 +146,7 @@ int main(int argc, char *argv[]){
 
             case 0:
                 /*cambio il programma in esecuzione*/
-                execlp("./source", "./source", SO_SOURCES_PARAM, SO_DURATION_PARAM, NULL);
+                execlp("./source", "source" ,SO_SOURCES_PARAM, SO_DURATION_PARAM, NULL);
                 printf("Error loading new program %s!\n\n", strerror(errno));
                 exit(EXIT_FAILURE);
                 break;
@@ -187,11 +191,17 @@ int main(int argc, char *argv[]){
 
     shmdt(mappa);
 
+    for(i=0;i<SO_SOURCES;i++){
+        kill(childSourceCreated[i], SIGKILL);
+    }
+
+    free(childSourceCreated);
+
     shmctl(shmId, IPC_RMID, NULL);
 
     msgctl(queue_id, IPC_RMID, NULL);
 
-   return 0;
+    return 0;
 }
 
 
