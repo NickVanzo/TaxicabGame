@@ -360,10 +360,13 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
         printf("Insert taxi move timeout (milliseconds): ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
         *SO_TIMEOUT = atoi(bufferTemp); /*converto da stringa a intero*/
-
-        printf("Insert simulation duration (seconds): ");
-        fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        *SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
+        
+        do{
+            printf("Insert simulation duration (seconds >= 2): ");
+            fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+            *SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
+        }while(*SO_DURATION < 2); /*la simulazione deve durare almeno 10 secondi*/
+        
     }
 
     /*calcolo le dimensioni consigliate della finestra di terminale per esperienza ottimale*/
@@ -372,12 +375,27 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
     screenWidth = 7*(2+SO_WIDTH) +55; /*lunghezza della singola cella per la dimenzione della mappa piu la len max delle stat*/
 
-    printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", *SO_TAXI, *SO_SOURCES, *SO_HOLES, *SO_CAP_MIN, *SO_CAP_MAX, *SO_TIMENSEC_MIN, *SO_TIMENSEC_MAX,*SO_TOP_CELLS,*SO_TIMEOUT, *SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+    if(*SO_DURATION < 2){
+        printf("Error: duration of simulation is less than 2 seconds...\nPlease insert valid inputs...\n");
+       do{
+            printf("Insert simulation duration (seconds >= 2): ");
+            fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+            *SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
+        }while(*SO_DURATION < 2); /*la simulazione deve durare almeno 10 secondi*/
+        
+        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", *SO_TAXI, *SO_SOURCES, *SO_HOLES, *SO_CAP_MIN, *SO_CAP_MAX, *SO_TIMENSEC_MIN, *SO_TIMENSEC_MAX,*SO_TOP_CELLS,*SO_TIMEOUT, *SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        tmpChar=getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
+        getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
 
-    tmpChar=getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
-    getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
-    /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
-    if(tmpChar == 'n' || tmpChar == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS,SO_TIMEOUT, SO_DURATION ,0, argv);
+    }else{
+        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", *SO_TAXI, *SO_SOURCES, *SO_HOLES, *SO_CAP_MIN, *SO_CAP_MAX, *SO_TIMENSEC_MIN, *SO_TIMENSEC_MAX,*SO_TOP_CELLS,*SO_TIMEOUT, *SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        tmpChar=getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
+        getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
+        /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
+        if(tmpChar == 'n' || tmpChar == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS,SO_TIMEOUT, SO_DURATION ,0, argv);
+
+    }
+
 }
 
 

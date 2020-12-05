@@ -53,7 +53,7 @@ void signalHandler(int signal){
                 
 
             if(msgsnd(queueId, &myMessage, 2*sizeof(int), 0) == -1){
-                write(stdout,"Error sending message!\n", strlen("Error sending message!\n"));
+                write(1,"Error sending message!\n", strlen("Error sending message!\n"));
             }
             break;
             
