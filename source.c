@@ -47,33 +47,19 @@ int main(int argc, char * argv[]) {
 	msgQeueueKey = ftok("msgQueue.key", 1);
 
 	/*Ottengo l'ID della coda di messaggi*/
-	if(queue_ID = msgget(msgQeueueKey, 0) == -1) {
+	if((queue_ID = msgget(msgQeueueKey, 0)) == -1) {
 		fprintf(stderr, "%s\n", strerror(errno));
 	}
 
 	srand(getpid()); /*Il messaggio viene mandato dopo X secondi che variano da 1 a SO_DURATION*/
 
-	i = 0;
-	/*Creo SO_SOURCES processi che immetterano SO_SOURCES messaggi nelle celle SOURCES*/
-	while(i < numberOfSources) {
-		switch(pid = fork()) {
-			case -1:
-				fprintf(stderr, "PID: [%d]\nErrore: %s", getpid(), strerror(errno));
-				break;
-			case 0:
-			my_msg.xDest = rand()%SO_WIDTH; /*Genero randomicamente una coordinata x*/
-				my_msg.yDest = rand()%SO_HEIGHT; /*Genero randomicamente una coordinata y*/
-				msgsnd(queue_ID, &my_msg, sizeof(int)*2 - sizeof(long), 0);
-				alarm(rand()%soDuration+1); /*Dico al SO di mandarmi un segnale SIGALRM dopo un numero casuale di secondi*/
-				pause(); /*Resto in attesa di un segnale, quello che mi interessa e' SIGALRM, cosi' parte l'handler e mando un messaggio in coda*/
-				exit(EXIT_SUCCESS);
-			default: 
-				/*Do nothing*/
-				break;
-		}
- 	i++;
- 	}
+	alarm(rand()%(soDuration/2));
+	pause();
 
+/*	my_msg.mtype = rand()%numberOfSources+1;
+	my_msg.xDest = rand()%SO_WIDTH; /*Genero randomicamente una coordinata x*/
+/*	my_msg.yDest = rand()%SO_HEIGHT; /*Genero randomicamente una coordinata y*/
+/*	msgsnd(queue_ID, &my_msg, sizeof(int)*2 - sizeof(long), 0);*/
 
     shmdt(mappa);
     msgctl(queue_ID, IPC_RMID, NULL);
