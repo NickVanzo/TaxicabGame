@@ -29,7 +29,11 @@ int main(int argc, char * argv[]) {
 	/*Inizializzazione maschera*/
 	bzero(&sa, sizeof(sa));
 	sigfillset(&my_mask);
-	sigdelset(&my_mask, SIGALRM);   
+    
+	sigdelset(&my_mask, SIGALRM); 
+    sigdelset(&my_mask, SIGKILL); 
+    sigdelset(&my_mask, SIGTERM);   
+
 	sa.sa_mask = my_mask;
 	sa.sa_handler = handle_signal;
 	sigaction(SIGALRM, &sa, NULL);
@@ -43,7 +47,7 @@ int main(int argc, char * argv[]) {
 	msgQeueueKey = ftok("msgQueue.key", 1);
 
 	/*Ottengo l'ID della coda di messaggi*/
-	if(queue_ID = msgget(msgQeueueKey, IPC_CREAT) == -1) {
+	if(queue_ID = msgget(msgQeueueKey, 0) == -1) {
 		fprintf(stderr, "%s\n", strerror(errno));
 	}
 

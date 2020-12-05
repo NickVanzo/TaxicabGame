@@ -78,6 +78,7 @@ int main(int argc, char *argv[]){
     key_t key;
     int queue_id;
     int shmId, shmKey;
+    int *createdChildSources;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
 
 
@@ -93,19 +94,19 @@ int main(int argc, char *argv[]){
         shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL |  0600);
     }
 
-    /*Creazione coda di messaggi*/
-
-
-    mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
+   mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
 
     if(mappa == (struct grigliaCitta * )(-1)){
         printf("Error at shmat! error code is %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    
-    /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
-    exitFromProgram = FALSE;
 
+
+
+    
+    
+    
+     /*Creazione coda di messaggi*/
     /*Ottengo la chiave per la coda di messaggi*/
     key = ftok("msgQueue.key", 1);
 
@@ -131,6 +132,8 @@ int main(int argc, char *argv[]){
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
+    /*creo struttura dati per potere salvarmi i processi...*/
+    createdChildSources = malloc(SO_SOURCES * sizeof(int));
 
     /*preparo i parametri da mandare come argomenti alla execlp*/
     sprintf(SO_TAXI_PARAM, "%d", SO_TAXI);
@@ -147,7 +150,7 @@ int main(int argc, char *argv[]){
 
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
     for(i=0;i<SO_SOURCES; i++){
-        switch(fork()){
+        switch(createdChildSources[i] =  fork()){
             case -1:
                 printf("Error while trying to fork()! %s\n", strerror(errno));
                 exit(EXIT_FAILURE);
@@ -165,7 +168,10 @@ int main(int argc, char *argv[]){
 
         }
     }
-
+    
+    
+    /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
+    exitFromProgram = FALSE;
     /*imposto durata simulazione*/
     alarm(SO_DURATION);
 
@@ -183,6 +189,15 @@ int main(int argc, char *argv[]){
 
 
     stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
+
+
+    /*killo tutti i processi*/
+    for(i=0;i<SO_SOURCES;i++){
+        if(kill(createdChildSources[i], SIGKILL)==-1){
+            printf("Error killink child %d. error is: %s\nmake
+            ", createdChildSources[i], strerror(errno));
+        }
+    }
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for(i=0;i<SO_HEIGHT; i++){
