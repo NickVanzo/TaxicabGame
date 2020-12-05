@@ -101,7 +101,7 @@ int main(int argc, char *argv[]){
     key = ftok("msgQueue.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
-    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0666) == -1) {
+    if((queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0666)) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -196,7 +196,7 @@ int main(int argc, char *argv[]){
     }
 
     free(childSourceCreated);
-
+    /*fprintf(stdout, "%d", shmId);*/
     shmctl(shmId, IPC_RMID, NULL);
 
     msgctl(queue_id, IPC_RMID, NULL);
