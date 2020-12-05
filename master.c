@@ -75,7 +75,7 @@ int main(int argc, char * argv[]) {
 
     /*Creazione coda di messaggi*/
     /*Ottengo la chiave per la coda di messaggi*/
-    queueKey = ftok("msgQueue.key", 1);
+    queueKey = ftok("ipcKey.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
     if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0666)) == -1) {
@@ -84,7 +84,7 @@ int main(int argc, char * argv[]) {
     }
 
     /*creo memoria condivisa*/
-    shmKey = ftok("msgQueue.key", 2);
+    shmKey = ftok("ipcKey.key", 2);
     shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0600);
     if (shmId == -1) {
         /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/

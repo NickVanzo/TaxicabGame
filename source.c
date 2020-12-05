@@ -19,20 +19,33 @@ int main(int argc,  char * argv[]){
     SO_DURATION = atoi(argv[2]);
 
     
-    queueKey = ftok("msgQueue.key", 1);
-    queueId = msgget(queueKey, 0);
-
-    if(queueKey == -1 || queueId == -1){
-        printf("Error opening queue!\n");
+    queueKey = ftok("ipcKey.key", 1);
+    if(queueKey == -1){
+        printf("Error retriving message queue key!\n");
         exit(EXIT_FAILURE);
     }
 
-    shmKey = ftok("msgQueue.key", 2);
-    shmId = shmget(shmKey, sizeof(struct grigliaCitta),0);
-    mappa = shmat(shmId, NULL, 0);
+    queueId = msgget(queueKey, 0);
+    if(queueId == -1){
+        printf("Error retriving queue id!\n");
+        exit(EXIT_FAILURE);
+    }
 
+    shmKey = ftok("ipcKey.key", 2);
+    if(shmKey == -1){
+        printf("Error retriving shared memory key!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    shmId = shmget(shmKey, sizeof(struct grigliaCitta),0);
+    if(shmId == -1){
+        printf("Error retriving shared memory ID!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    mappa = shmat(shmId, NULL, 0);
     if(mappa == (struct grigliaCitta *)(-1)){
-        printf("Error opening shared memory segment!\n");
+        printf("Error attaching memory segment!\n");
         exit(EXIT_FAILURE);
     }
 
