@@ -22,8 +22,8 @@ int main(int argc, char * argv[]) {
 	int shmKey, msgQeueueKey;
 	struct sigaction sa;
 	sigset_t my_mask;
-	numberOfSources = atoi(argv[1]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
-	soDuration = atoi(argv[2]); 
+	numberOfSources = atoi(argv[2]); /*argv[2] sarebbe SO_SOURCES_PARAM passato dalla exce*/
+	soDuration = atoi(argv[3]); 
 
 
 	/*Inizializzazione maschera*/
@@ -74,14 +74,9 @@ int main(int argc, char * argv[]) {
  	i++;
  	}
 
-	/*	
- 		PROBLEMA: cosa succede se non tutti i figli sono riusciti a terminare entro lo scadere del tempo di gioco? Ragionarci su
- 		PROBLEMA2: i processi passano a running anche se ricevono segnali diversi da SIGALRM, procedere con mask? Cambiare strategia?
-                        -> usa sigprocmask()
- 	*/
- 	while(wait(NULL) != -1) { /*Aspetto che tutti i figli abbiano terminato, volevo farlo con waitpid ma e' tardi e sono stanco (la modifico domani)*/
- 		
- 	}
+
+    shmdt(mappa);
+    msgctl(queue_ID, IPC_RMID, NULL);
 }
 
 void handle_signal(int signum) {

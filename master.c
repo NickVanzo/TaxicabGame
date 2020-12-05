@@ -61,13 +61,7 @@ boolean exitFromProgram;
 */
 void signalHandler(int signal);
 
-/*
-    funzione che genera la coda di messaggi prodotti da SO_SOURCES e consumati dai taxi
-    La funzione ritorna un intero, ossia l'ID della coda di messaggi. Potrei ottenerlo direttamente nel main(l'id) ma preferisco 
-    sporcarlo il meno possibile. La chiave viene generata nel main e passata come parametro alla funzione
-*/
 
-int setupQueue(int SO_SOURCES, key_t key);
 
 
 
@@ -78,7 +72,7 @@ int main(int argc, char *argv[]){
     key_t key;
     int queue_id;
     int shmId, shmKey;
-    int *createdChildSources;
+ 
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
 
 
@@ -101,18 +95,13 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
 
-
-    
-
-    
-    
     
      /*Creazione coda di messaggi*/
     /*Ottengo la chiave per la coda di messaggi*/
     key = ftok("msgQueue.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
-    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
+    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0666) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -136,8 +125,6 @@ int main(int argc, char *argv[]){
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
-    /*creo struttura dati per potere salvarmi i processi...*/
-    createdChildSources = malloc(SO_SOURCES * sizeof(int));
 
     /*preparo i parametri da mandare come argomenti alla execlp*/
 
@@ -147,7 +134,7 @@ int main(int argc, char *argv[]){
 
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
     for(i=0;i<SO_SOURCES; i++){
-        switch(createdChildSources[i] =  fork()){
+        switch(fork()){
             case -1:
                 printf("Error while trying to fork()! %s\n", strerror(errno));
                 exit(EXIT_FAILURE);
@@ -188,12 +175,7 @@ int main(int argc, char *argv[]){
     stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
 
 
-    /*killo tutti i processi*/
-    for(i=0;i<SO_SOURCES;i++){
-        if(kill(createdChildSources[i], SIGKILL)==-1){
-            printf("Error killink child %d. error is: %s\n", createdChildSources[i], strerror(errno));
-        }
-    }
+    
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for(i=0;i<SO_HEIGHT; i++){
@@ -570,15 +552,4 @@ void initMap(struct grigliaCitta* mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_
         }
     }
 
-}
-
-int setupQueue(int SO_SOURCES, key_t key) {
-    int queue_id;
-
-    if(queue_id = msgget(key, IPC_CREAT | IPC_EXCL | 0600) == -1) {
-        fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    return queue_id;
 }
