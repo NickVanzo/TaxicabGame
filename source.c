@@ -84,5 +84,5 @@ void handle_signal(int signum) {
 			default:
 				pause(); /*Resto in attesa di un segnale, quello che mi interessa e' SIGALRM, cosi' parte l'handler e mando un messaggio in coda*/
 			break;
-	}
+	} 
 }
