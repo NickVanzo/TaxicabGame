@@ -1,6 +1,6 @@
 CC = gcc -std=c89 -pedantic
 
-run: master taxi source
+run: master taxi source ipcKey.key
 	./master
 
 master: master.o utils.o taxi
