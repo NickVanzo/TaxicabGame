@@ -22,9 +22,19 @@ int main(int argc,  char * argv[]){
     queueKey = ftok("msgQueue.key", 1);
     queueId = msgget(queueKey, 0);
 
+    if(queueKey == -1 || queueId == -1){
+        printf("Error opening queue!\n");
+        exit(EXIT_FAILURE);
+    }
+
     shmKey = ftok("msgQueue.key", 2);
     shmId = shmget(shmKey, sizeof(struct grigliaCitta),0);
     mappa = shmat(shmId, NULL, 0);
+
+    if(mappa == (struct grigliaCitta *)(-1)){
+        printf("Error opening shared memory segment!\n");
+        exit(EXIT_FAILURE);
+    }
 
 
 
