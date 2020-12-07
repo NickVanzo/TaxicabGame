@@ -13,7 +13,7 @@
         5-> pid processo che ha servito più clienti
     boolean finalPrint indica se è la stampa finale della mappa e quindi evidenziare le celle più trafficate
 */
-void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS);
+void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -28,7 +28,7 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
 /*
     funzione per posizionare i blocchi o case all'interno della griglia/citta'
     accetta come parametri la mappa in cui posizionare i buchi e il numero di buchi richiesto dal giocatore
-    fino a quando ci sono blocchi da aggiungere nella mappa gli aggiungo 
+    fino a quando ci sono blocchi da aggiungere nella mappa gli aggiungo
     se ci sono troppi blocchi da posizionare il programma cicla all'infinito
 */
 void spawnBlocks(struct grigliaCitta * mappa, int SO_HOLES);
@@ -36,7 +36,7 @@ void spawnBlocks(struct grigliaCitta * mappa, int SO_HOLES);
 /*
     funzione per posizionare le SOURCES all'interno della griglia della citta'
     accetta come parametri la mappa in cui posizionare le SOURCES e il numero di SOURCES richiesto dal giocatore
-    fino a quando ci sono SOURCES da piazzare la funzione cicla 
+    fino a quando ci sono SOURCES da piazzare la funzione cicla
     per piazzare una SOURCE dobbiamo assicurarci che stiamo cercando di posizionarla in una ROAD e non in un BLOCK
 */
 void spawnSources(struct grigliaCitta * mappa, int SO_SOURCES);
@@ -66,7 +66,7 @@ int main(int argc, char * argv[]) {
     int shmId, shmKey;
     int * childSourceCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
-
+    int runningTime = 0;
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
 
@@ -149,15 +149,17 @@ int main(int argc, char * argv[]) {
     while (!exitFromProgram) {
         /*per il marco del futuro: questa deve essere messa tra una P e una V*/
         /*per il marco del futuro: qua devo andare a aggiornare mapStats[]*/
-        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS);
+        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
+        runningTime++;
         sleep(1);
     }
+    runningTime++;
 
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
 
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
-    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS);
+    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for (i = 0; i < SO_HEIGHT; i++) {
@@ -352,12 +354,12 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
             * SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
         } while ( * SO_DURATION < 2); /*la simulazione deve durare almeno 10 secondi*/
 
-        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
         tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
         getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
 
     } else {
-        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and exactly %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
         tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
         getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
         /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
@@ -367,11 +369,14 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
 
 }
 
-void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS) {
-    int i, j, k, printedStats = 0, taxiOnTheCell;
-    char stats[12][128];
-    const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
+void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime) {
+    int i, j, k, printedStats = 0, taxiOnTheCell, rowCount = 0; /*rowcount serve a contare quante righe sto stampando...*/
+    char stats[13][128];
+    const int numberOfStats = 13; /*numero di linee di statistiche da stampare*/
     char * strTmp = (char * ) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
+    struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
+
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
 
     /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
@@ -386,14 +391,15 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     sprintf(stats[9], "%s", " | \033[45m  \033[49m -> Magenta shows source points");
     sprintf(stats[10], "%s", " | \033[107m  \033[49m -> White shows roads");
     sprintf(stats[11], "%s", " | \033[43m  \033[49m -> Yellow shows SO_TOP_CELLS (only final print)");
+    sprintf(stats[12], "%s %d","Running time :", runningTime);
 
-    for (k = 0; k < 2; k++, printedStats++) {
+    for (k = 0; k < 2; k++, printedStats++, rowCount++) {
         /*stampo il bordo superiore*/
         for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("       ", GRAY, GRAY);
         printf("%s\n", stats[printedStats]);
     }
 
-    for (i = 0; i < SO_HEIGHT; i++) {
+    for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
         /*stampo il corpo della mappa*/
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
@@ -424,7 +430,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     }
 
     /*stampo bordo inferiore*/
-    for (k = 0; k < 2; k++) {
+    for (k = 0; k < 2; k++, rowCount++) {
         for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("       ", GRAY, GRAY);
         if (printedStats < numberOfStats) {
             /*stampo statistica a financo banda grigia*/
@@ -437,11 +443,19 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     /*controllo che ho stampato tutti gli stats e se non lo ho fatto stampo quelli che mancano allineandoli agli altri sotto*/
     if (printedStats < 12) {
-        for (i = printedStats; i < numberOfStats; i++) {
+        for (i = printedStats; i < numberOfStats; i++, rowCount++) {
             for (j = 0; j < 7 * (SO_WIDTH + 2); j++) printf(" ");
             printf("%s\n", stats[i]);
         }
     }
+
+    /*vado a stampare tanti \n in modo da fare sembrare che la pagina si stia aggiornando in continuazione...*/
+    if(finalPrint == TRUE){
+        for(i=0; i<(size.ws_row - rowCount-4); i++) printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
+    }else{
+        for(i=0; i<(size.ws_row - rowCount); i++) printf("\n");
+    }
+
 
     free(strTmp); /*dealloco strTmp*/
 }

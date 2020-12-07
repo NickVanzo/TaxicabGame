@@ -64,6 +64,11 @@
     #include <sys/shm.h>
 #endif
 
+#ifndef INCLUDE_IOCTL /*vedi pg 711 di advanced programming for unix enviroment o come si chiema*/
+  #define INCLUDE_IOCTL
+  #include <sys/ioctl.h>
+#endif
+
 
 #ifndef DEFINES
     #define DEFINES
@@ -134,14 +139,14 @@ typedef struct{
 
 /*struttura per invvio messaggi contentente richiesta di corsa a un taxi*/
 struct msgBuf{
-    long mtype; /*se mtype = 0 kill di chi lo legge, se mtype = 1...n richiedere corsa a source 1...n*/ 
-    int xDest; 
+    long mtype; /*se mtype = 0 kill di chi lo legge, se mtype = 1...n richiedere corsa a source 1...n*/
+    int xDest;
     int yDest;
 };
 
 struct grigliaCitta{
     map_cell matrice[SO_HEIGHT][SO_WIDTH];
-}; 
+};
 
 
 
@@ -152,7 +157,7 @@ struct grigliaCitta{
 
     /*
         FUNZIONI UI
-    
+
     */
     void colorPrintf(char *message, enum color colore, enum color bgcolore);
 
