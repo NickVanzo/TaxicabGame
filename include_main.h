@@ -135,6 +135,7 @@ typedef struct{
     int totalNumberOfTaxiPassedHere; /*indica il numero totale di taxi passati su questa cella*/
     time_t timeRequiredToCrossCell; /*indica il tempo richiesto in ms per attraversare la cella*/
     boolean isInTopSoCell; /*questo valore mi dice se la mia cella è nelle SO_TOP_CELL per traffico passato da qua da stampare a fine simulazione*/
+    int mutex; /*Usato per aggiornare le informazioni di una cella*/
 } map_cell;
 
 /*struttura per invvio messaggi contentente richiesta di corsa a un taxi*/
