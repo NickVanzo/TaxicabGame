@@ -33,25 +33,32 @@ int main(int argc, char * argv[]){
     	spawnTaxi(mappa,posizione_taxi_x,posizione_taxi_y);
     	shmdt(mappa);
 
+
     	exit(EXIT_SUCCESS);
 }
 
 void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y) {
+	/*Dubbio è la chiave o l'id del semafoto? Se è la chiave allora devo cambiare il codice perchè non sto facendo la get, se non è la chiave allora non capisco cosa sia sbagliato*/
+	/*Errore ottenuto: non vengono stampati i numeri di taxi presenti nelle celle durante la simulazione*/
+	int availableSpaceOnCell; 
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o non è una road cambio cella*/
 	do {
 		/*Seleziono un punto random*/
 		posizione_taxi_x = rand()%SO_WIDTH;
 		posizione_taxi_y = rand()%SO_HEIGHT;
-	} while(mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != ROAD || mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace == 0);
+	} while((availableSpaceOnCell = semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, GETVAL)) == 0 || mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != ROAD);
 	/*La condizione fa si' che il taxi non spawni dove non gli è consentito, ossia in una cella non ROAD oppure in una cella con availableSpace = taxiOnThisCell*/
 	/*Incremento il numero di semafori presenti nella cella in cui sono spawnato*/
 
+	/*p su available space*/
 	sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
 	sops.sem_flg = 0; /*Comportamento di default*/
-	sops.sem_op = -1; /*Decremento la variabile mutex*/
+	sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
+	/*Abbasso di uno il valore del semaforo availableSpace*/
+	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
-	/*Sono dentro la sezione critica*/
-	mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace--;
+	/*Sezione critica*/
+	semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, availableSpaceOnCell--);
 	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++;
 	mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 	sops.sem_op = 1; 
