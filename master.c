@@ -525,8 +525,6 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     free(strTmp); /*dealloco strTmp*/
 }
 
-
-
 void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime) {
     int i, j, k, taxiOnTheCell, rowCount = 0; /*rowcount serve a contare quante righe sto stampando...*/
     char stats[12][128];
@@ -600,9 +598,6 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     free(strTmp); /*dealloco strTmp*/
 }
 
-
-
-
 /*
 funzione che controla se la mappa ha zone inaccessibili
 */
@@ -618,7 +613,6 @@ void checkForDegeneresMap() {
 funzione che gestisce cosa succede se ricevo un segnale
 in questo caso se ricvo sigalarm imposto esci dal programma a true ed esco
 */
-
 void signalHandler(int signal) {
     switch (signal) {
     case SIGALRM:
@@ -667,6 +661,7 @@ void searchForTopCells(struct grigliaCitta * mappa, int SO_TOP_CELL) {
 void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES) {
 
     int i, j;
+    int tmp;
 
     spawnBlocks(mappa, SO_HOLES);
     spawnSources(mappa, SO_SOURCES);
@@ -676,11 +671,19 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
             /*inizialisso il semaforo con lo spazio creto a random tra SO_CAP_MIN e MAX*/
             do {
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
-                mappa -> matrice[i][j].availableSpace = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
-                mappa->matrice[i][j].mutex = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                /*ciclare fino a che non ho un semaforo non valido!*/
+                do{
+                    tmp = mappa -> matrice[i][j].availableSpace = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
+                tmp = -1;
 
+                do{
+                    tmp = mappa->matrice[i][j].mutex = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
+                
                 /*initi di mutex a 1*/
                 semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
+                
 
             }
             while (mappa -> matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
