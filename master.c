@@ -80,6 +80,7 @@ int main(int argc, char * argv[]) {
     int queue_id;
     int shmId, shmKey;
     int * childSourceCreated;
+    int * taxiCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
@@ -143,17 +144,36 @@ int main(int argc, char * argv[]) {
             printf("Error while trying to fork()! %s\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
-
         case 0:
             /*cambio il programma in esecuzione*/
             execlp("./source", "source", SO_SOURCES_PARAM, SO_DURATION_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
-
         default:
             break;
 
+        }
+    }
+
+    /*Creao un array contenente i pid dei figli taxi creati*/
+    taxiCreated = malloc(SO_TAXI * sizeof(int));
+    /*faccio la fork per creare i processi taxi*/
+    for(i = 0; i < SO_TAXI; i++) {
+        taxiCreated[i] = fork();
+        switch(taxiCreated[i]) {
+        case -1:
+            printf("Error while trying to fork()! %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+            break;
+        case 0: 
+            execlp("./taxi", "taxi", SO_DURATION_PARAM/*, SO_TAXI_PARAM*/);
+            printf("Error loading new program %s!\n\n", strerror(errno));
+            exit(EXIT_FAILURE);
+            break;
+
+        default:
+            break;                       
         }
     }
 
@@ -191,7 +211,8 @@ int main(int argc, char * argv[]) {
     for (i = 0; i < SO_HEIGHT; i++) {
         for (j = 0; j < SO_WIDTH; j++) {
             semctl(mappa -> matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
-            semctl(mappa -> matrice[i][j].mutex, 0, IPC_RMID, 0); /*rimuovo i semafori*/
+            semctl(mappa -> matrice[i][j].mutex, j, IPC_RMID, 0); /*rimuovo i semafori*/
+
         }
     }
 
@@ -202,6 +223,7 @@ int main(int argc, char * argv[]) {
     }
 
     free(childSourceCreated);
+    free(taxiCreated);
     /*fprintf(stdout, "%d", shmId);*/
     shmctl(shmId, IPC_RMID, NULL);
 
