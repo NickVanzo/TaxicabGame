@@ -31,6 +31,11 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime);
 
 /*
+    Funzione per aggiornare le statistiche
+*/
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght);
+
+/*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
     questa funzione legge dal stdin o argv i parametri e li assegna.
     Inoltre stampa un riepilogo dei parametri e informa l'utente della dimensione consigliata dello schermo
@@ -95,18 +100,18 @@ int main(int argc, char * argv[]) {
     queueKey = ftok("ipcKey.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
-    if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0666)) == -1) {
+    if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0777)) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     /*creo memoria condivisa*/
     shmKey = ftok("ipcKey.key", 2);
-    shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0600);
+    shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0777);
     if (shmId == -1) {
         /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/
         system("./cleanIpcs.sh");
-        shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0600);
+        shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0777);
     }
 
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
@@ -183,8 +188,8 @@ int main(int argc, char * argv[]) {
     alarm(SO_DURATION);
 
     while (!exitFromProgram) {
-        /*per il marco del futuro: questa deve essere messa tra una P e una V*/
-        /*per il marco del futuro: qua devo andare a aggiornare mapStats[]*/
+        
+        aggiornaStatistiche(mappa, mapStats, 6);
 
         if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
           stampaStatisticheAscii(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
@@ -196,7 +201,7 @@ int main(int argc, char * argv[]) {
         sleep(1);
     }
     runningTime++;
-
+    aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
 
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
@@ -461,6 +466,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     const int numberOfStats = 13; /*numero di linee di statistiche da stampare*/
     char * strTmp = (char * ) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
     struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
+    struct sembuf sops; 
 
     ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
 
@@ -486,11 +492,21 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         printf("%s\n", stats[printedStats]);
     }
 
+    sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
+	sops.sem_flg = 0; /*Comportamento di default*/
+
     for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
         /*stampo il corpo della mappa*/
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
+          
+	        sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
+            semop(mappa->matrice[i][j].mutex, &sops, 1);
             sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+            sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
+            semop(mappa->matrice[i][j].mutex, &sops, 1);
+
+
             if (mappa -> matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                 if ((finalPrint == TRUE) && (mappa -> matrice[i][j].isInTopSoCell == TRUE)) {
@@ -732,5 +748,10 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 
         }
     }
+
+}
+
+/*DECIDERE COME FARE CON NICK*/
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght){
 
 }

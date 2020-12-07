@@ -20,7 +20,19 @@ void settingIpcs(struct grigliaCitta *mappa);
 
 void spostamentoVersoDestinazione(struct grigliaCitta *mappa);
 
+/*
+    funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. imposta destX e desY con le coordinate della source più vicina
+*/
+void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY);
+/*funzioni di aiuto per non avere problemi!*/
+int closestMoveUpper(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY);
+int closestMoveLower(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY);
+int closestMoveRight(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY);
+int closestMoveLeft(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY);
+
+
 struct sembuf sops; 
+
 
 int main(int argc, char * argv[]){
 	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
@@ -46,7 +58,11 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 		/*Seleziono un punto random*/
 		posizione_taxi_x = rand()%SO_WIDTH;
 		posizione_taxi_y = rand()%SO_HEIGHT;
-	} while((availableSpaceOnCell = semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, GETVAL)) == 0 || mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != ROAD);
+        availableSpaceOnCell = semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, GETVAL);
+
+        printf("Available space on %d:%d is %d\n", posizione_taxi_x, posizione_taxi_y, availableSpaceOnCell);
+
+	} while(availableSpaceOnCell > 0 && (mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != BLOCK));
 	/*La condizione fa si' che il taxi non spawni dove non gli è consentito, ossia in una cella non ROAD oppure in una cella con availableSpace = taxiOnThisCell*/
 	/*Incremento il numero di semafori presenti nella cella in cui sono spawnato*/
 
@@ -58,14 +74,22 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
 	/*Sezione critica*/
-	semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, availableSpaceOnCell--);
-	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++;
+
+
+
+	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell = 10;
+
 	mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 	sops.sem_op = 1; 
 	/*Uscita sezione critica rilasciando la risorsa*/
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
 	/*continua*/
 }
+
+
+
+
+
 
 void settingIpcs(struct grigliaCitta *mappa) {
 	int queue_key, queue_id; /*Variabili per la coda di messaggi*/
@@ -107,6 +131,93 @@ void settingIpcs(struct grigliaCitta *mappa) {
 
 
 
+
+
+void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY){
+    int tempX = taxiX, tempY= taxiY;
+    int rangeX = 3, rangeY = 3;
+    int i,j,k,l,m;
+
+    while(mappa->matrice[tempX][tempY].cellType != SOURCE){
+
+        tempX = taxiX - ((rangeX-1)/2); /*mi sposto come punto di inzio della ricerca nella cella in alto a sx nella diagonale*/
+        tempY = taxiY - ((rangeY -1)/2);
+
+        
+
+       
+       
+      
+
+
+        /*incremento il range su cui devo controllare los corrimento*/
+        rangeX += 2;
+        rangeY += 2;
+    }
+
+}
+
+int closestMoveUpper(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY){
+    int i = 0;
+    tempX ++;/*mi sposto di una cella a destra di quella in diagonale per potere mantenere uniforme il codice*/
+        for(i=0;i<rangeX-1;i++){ /*scorro la linea superiore*/    
+           if(mappa->matrice[tempX][tempY].cellType == SOURCE){
+               *destX = tempX;
+               *destY = tempY;
+               return 1;
+           }
+           tempX++; /*mi sposto a destra*/
+        }
+        return 0;
+}
+
+
+int closestMoveLower(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY){
+    int i = 0;
+     tempY++; /*ho già controllato che la cella non sia una source. mi sopsto sotto di uno*/
+        
+        for(i=0;i<rangeY-1;i++){ /*controllo la linea a destra*/
+            if(mappa->matrice[tempX][tempY].cellType == SOURCE){
+               *destX = tempX;
+               *destY = tempY;
+               return 1;
+           }
+           tempY++;/*mi sposto di sotto*/
+        }
+        return 0;
+}
+
+
+int closestMoveLeft(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY){
+    int i = 0;
+     tempX --; /*mi sposto indietro di uno*/
+
+        for(i=0;i<rangeX-1;i++){ /*scorro la linea inferiore*/    
+           if(mappa->matrice[tempX][tempY].cellType == SOURCE){
+               *destX = tempX;
+               *destY = tempY;
+               return 1;
+           }
+           tempX--; /*mi sposto a destra*/
+        }
+        return 0;
+}
+
+
+int closestMoveRight(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY, int rangeX, int rangeY, int tempX, int tempY){
+    int i = 0;
+      tempY--; /*mi sposto di una cella in sopra*/
+
+        for(i=0;i<rangeY-1;i++){ /*scorro la linea a sinistra*/    
+           if(mappa->matrice[tempX][tempY].cellType == SOURCE){
+               *destX = tempX;
+               *destY = tempY;
+               return 1;
+           }
+           tempY--; /*mi sposto a destra*/
+        }
+        return 0;
+}
 
 
 
