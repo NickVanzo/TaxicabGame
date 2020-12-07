@@ -82,7 +82,7 @@ int main(int argc, char * argv[]) {
     int * childSourceCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
-    boolean printWithAscii = TRUE; /*se lo schermo è piccolo stampo con ascii*/
+    boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
 
@@ -191,6 +191,7 @@ int main(int argc, char * argv[]) {
     for (i = 0; i < SO_HEIGHT; i++) {
         for (j = 0; j < SO_WIDTH; j++) {
             semctl(mappa -> matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
+            semctl(mappa -> matrice[i][j].mutex, 0, IPC_RMID, 0); /*rimuovo i semafori*/
         }
     }
 
@@ -399,6 +400,8 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
           tmpChar = getc(stdin);
           getc(stdin); /*tolgo lo \n che senno fa partire subito la simulazione*/
           if(tmpChar == 'y') *printWithAscii = TRUE;
+          else *printWithAscii = FALSE;
+
           printf("\nSimulation will now start. Press any key to begin....");
           getc(stdin);
         }
@@ -419,6 +422,8 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
           tmpChar = getc(stdin);
           getc(stdin);/*tolgo lo \n che senno fa partire subito la simulazione*/
           if(tmpChar == 'y') *printWithAscii = TRUE;
+          else *printWithAscii = FALSE;
+
           printf("\nSimulation will now start. Press any key to begin....");
           getc(stdin);
         }
@@ -672,6 +677,11 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
             do {
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
                 mappa -> matrice[i][j].availableSpace = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                mappa->matrice[i][j].mutex = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+
+                /*initi di mutex a 1*/
+                semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
+
             }
             while (mappa -> matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
 
