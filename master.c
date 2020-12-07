@@ -15,6 +15,21 @@
 */
 void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime);
 
+
+/*
+    funzione per la stampa in master delle statistiche della cella ma solo con caratteri ASCII e con celle più piccole e le statistiche sotto...
+    map_cell mappa[][] la mappa del gioco
+    int statistiche[6]: array contenente le statistiche:
+        0-> numero di corse completate con successo
+        1-> numero di corse no completate
+        2-> numero di corse abortite
+        3-> pid processo con la somma di tempo di corsa maggiore tra tutte
+        4-> pid processo che ha percorso più distanza
+        5-> pid processo che ha servito più clienti
+    boolean finalPrint indica se è la stampa finale della mappa e quindi evidenziare le celle più trafficate
+*/
+void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime);
+
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
     questa funzione legge dal stdin o argv i parametri e li assegna.
@@ -23,7 +38,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     in questo modo utente ha tempo di aggiustare lo schermo e controllare che i parametri inseriti sono validi
 
 */
-void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_CAP_MIN, int * SO_CAP_MAX, int * SO_TIMENSEC_MIN, int * SO_TIMENSEC_MAX, int * SO_TOP_CELLS, int * SO_TIMEOUT, int * SO_DURATION, int argc, char * argv[]);
+void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_CAP_MIN, int * SO_CAP_MAX, int * SO_TIMENSEC_MIN, int * SO_TIMENSEC_MAX, int * SO_TOP_CELLS, int * SO_TIMEOUT, int * SO_DURATION, int argc, char * argv[], boolean *printWithAscii);
 
 /*
     funzione per posizionare i blocchi o case all'interno della griglia/citta'
@@ -67,11 +82,12 @@ int main(int argc, char * argv[]) {
     int * childSourceCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
+    boolean printWithAscii = TRUE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
 
     /*avvio setup della simulazione*/
-    setupSimulation( & SO_TAXI, & SO_SOURCES, & SO_HOLES, & SO_CAP_MIN, & SO_CAP_MAX, & SO_TIMENSEC_MIN, & SO_TIMENSEC_MAX, & SO_TOP_CELLS, & SO_TIMEOUT, & SO_DURATION, argc, argv);
+    setupSimulation( & SO_TAXI, & SO_SOURCES, & SO_HOLES, & SO_CAP_MIN, & SO_CAP_MAX, & SO_TIMENSEC_MIN, & SO_TIMENSEC_MAX, & SO_TOP_CELLS, & SO_TIMEOUT, & SO_DURATION, argc, argv, &printWithAscii);
 
     /*Creazione coda di messaggi*/
     /*Ottengo la chiave per la coda di messaggi*/
@@ -149,7 +165,13 @@ int main(int argc, char * argv[]) {
     while (!exitFromProgram) {
         /*per il marco del futuro: questa deve essere messa tra una P e una V*/
         /*per il marco del futuro: qua devo andare a aggiornare mapStats[]*/
-        stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
+
+        if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
+          stampaStatisticheAscii(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
+        }else{
+          stampaStatistiche(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
+        }
+
         runningTime++;
         sleep(1);
     }
@@ -159,7 +181,11 @@ int main(int argc, char * argv[]) {
 
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
-    stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
+    if(printWithAscii){
+      stampaStatisticheAscii(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
+    }else{
+      stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
+    }
 
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for (i = 0; i < SO_HEIGHT; i++) {
@@ -278,10 +304,14 @@ void spawnSources(struct grigliaCitta * mappa, int SO_SOURCES) {
     }
 }
 
-void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_CAP_MIN, int * SO_CAP_MAX, int * SO_TIMENSEC_MIN, int * SO_TIMENSEC_MAX, int * SO_TOP_CELLS, int * SO_TIMEOUT, int * SO_DURATION, int argc, char * argv[]) {
+void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_CAP_MIN, int * SO_CAP_MAX, int * SO_TIMENSEC_MIN, int * SO_TIMENSEC_MAX, int * SO_TOP_CELLS, int * SO_TIMEOUT, int * SO_DURATION, int argc, char * argv[], boolean *printWithAscii) {
     int screenHeight, screenWidth;
     char bufferTemp[1024]; /*buffer temporaneo per lettura dei parametri da tastiera*/
     char tmpChar; /*per leggere eventuali input non desiderati*/
+
+    struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711. la uso per sapere se devo o meno stampare con asci o con int*/
+
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
 
     if (argc == 11) {
         /*1 nome comando + 10 parametri*/
@@ -295,6 +325,7 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
         * SO_TOP_CELLS = atoi(argv[8]);
         * SO_TIMEOUT = atoi(argv[9]);
         * SO_DURATION = atoi(argv[10]);
+
     } else {
         printf("Insert number of taxi available for the simulation: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
@@ -354,16 +385,44 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
             * SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
         } while ( * SO_DURATION < 2); /*la simulazione deve durare almeno 10 secondi*/
 
-        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        printf("Simulation will now start with thw following parameters:\nn\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+
+        tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
+        getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
+        /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
+        if (tmpChar == 'n' || tmpChar == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION, 0, argv, printWithAscii);
+
+
+        if(screenWidth > size.ws_col){
+          colorPrintf("\nWarning!", YELLOW, DEFAULT );
+          printf(" screen size width might be too small to fit a beautified output version... would you like to print an ASCII rappresentation? (y/n - default: n): ");
+          tmpChar = getc(stdin);
+          getc(stdin); /*tolgo lo \n che senno fa partire subito la simulazione*/
+          if(tmpChar == 'y') *printWithAscii = TRUE;
+          printf("\nSimulation will now start. Press any key to begin....");
+          getc(stdin);
+        }
+
         tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
         getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
 
     } else {
-        printf("Simulation will now start with thw following parameters:\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
+        printf("Simulation will now start with thw following parameters:\n\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", * SO_TAXI, * SO_SOURCES, * SO_HOLES, * SO_CAP_MIN, * SO_CAP_MAX, * SO_TIMENSEC_MIN, * SO_TIMENSEC_MAX, * SO_TOP_CELLS, * SO_TIMEOUT, * SO_DURATION, C_YELLOW, screenWidth, screenHeight, C_DEFAULT);
         tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
         getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
         /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
-        if (tmpChar == 'n' || tmpChar == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION, 0, argv);
+        if (tmpChar == 'n' || tmpChar == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION, 0, argv, printWithAscii);
+
+        if(screenWidth > size.ws_col){
+          colorPrintf("\nWarning!", YELLOW, DEFAULT );
+          printf(" screen size width might be too small to fit a beautified output version... would you like to print an ASCII rappresentation? (y/n - default: n): ");
+          tmpChar = getc(stdin);
+          getc(stdin);/*tolgo lo \n che senno fa partire subito la simulazione*/
+          if(tmpChar == 'y') *printWithAscii = TRUE;
+          printf("\nSimulation will now start. Press any key to begin....");
+          getc(stdin);
+        }
+
 
     }
 
@@ -386,12 +445,13 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
     sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
-    sprintf(stats[7], "%s", " |\033[33m Colours legend: \033[39m");
-    sprintf(stats[8], "%s", " | \033[40m  \033[49m -> Black shows blocked zones");
-    sprintf(stats[9], "%s", " | \033[45m  \033[49m -> Magenta shows source points");
-    sprintf(stats[10], "%s", " | \033[107m  \033[49m -> White shows roads");
-    sprintf(stats[11], "%s", " | \033[43m  \033[49m -> Yellow shows SO_TOP_CELLS (only final print)");
-    sprintf(stats[12], "%s %d","Running time :", runningTime);
+    sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
+    sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
+    sprintf(stats[9], "%s", " | \033[40m  \033[49m -> Black shows blocked zones");
+    sprintf(stats[10], "%s", " | \033[45m  \033[49m -> Magenta shows source points");
+    sprintf(stats[11], "%s", " | \033[107m  \033[49m -> White shows roads");
+    sprintf(stats[12], "%s", " | \033[43m  \033[49m -> Yellow shows SO_TOP_CELLS (only final print)");
+
 
     for (k = 0; k < 2; k++, printedStats++, rowCount++) {
         /*stampo il bordo superiore*/
@@ -451,14 +511,92 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     /*vado a stampare tanti \n in modo da fare sembrare che la pagina si stia aggiornando in continuazione...*/
     if(finalPrint == TRUE){
-        for(i=0; i<(size.ws_row - rowCount-4); i++) printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
+        for(i=0; i<(size.ws_row - rowCount-3); i++) printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
     }else{
-        for(i=0; i<(size.ws_row - rowCount); i++) printf("\n");
+        for(i=0; i<(size.ws_row - rowCount-1); i++) printf("\n");
     }
 
 
     free(strTmp); /*dealloco strTmp*/
 }
+
+
+
+void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, boolean finalPrint, int SO_TOP_CELLS, int runningTime) {
+    int i, j, k, taxiOnTheCell, rowCount = 0; /*rowcount serve a contare quante righe sto stampando...*/
+    char stats[12][128];
+    const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
+    char * strTmp = (char * ) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
+    struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
+
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
+
+    /*creo le stringhe da stampare*/
+    sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
+    sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
+    sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
+    sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
+    sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
+    sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
+    sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
+    sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
+    sprintf(stats[9], "%s", " | \033[44m  \033[49m -> Blue shows blocked zones");
+    sprintf(stats[10], "%s", " | \033[45m  \033[49m -> Magenta shows source points");
+    sprintf(stats[11], "%s", " | \033[43m  \033[49m -> Yellow shows SO_TOP_CELLS (only final print)");
+
+
+    printf("    ");
+    for (k = 0; k < SO_WIDTH; k++) {
+        /*stampo il bordo superiore*/
+        sprintf(strTmp, " %-2d ", k);
+        colorPrintf(strTmp, RED, DEFAULT);
+    }
+    printf("\n");
+    rowCount++;
+
+    for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
+        /*stampo il corpo della mappa*/
+        sprintf(strTmp, " %-2d ", i);
+        colorPrintf(strTmp, RED, DEFAULT); /*stampo bordo laterale sx*/
+        for (j = 0; j < SO_WIDTH; j++) {
+            sprintf(strTmp, " %-2d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+            if (mappa -> matrice[i][j].cellType == ROAD) {
+                /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
+                if ((finalPrint == TRUE) && (mappa -> matrice[i][j].isInTopSoCell == TRUE)) {
+                    colorPrintf(strTmp, BLACK, YELLOW);
+                }else {
+                    printf("%s", strTmp);
+                } /*se non sono alla stampa finale allora devo solamente andare a stampare le srade bianche...*/
+
+            } else if (mappa -> matrice[i][j].cellType == SOURCE) {
+                colorPrintf(strTmp, BLACK, MAGENTA);
+            } else {
+                colorPrintf(strTmp, BLUE, BLUE);
+            }
+        }
+        printf("\n");
+    }
+
+
+    printf("\n");
+    for (i = 0; i < numberOfStats; i++, rowCount++) {
+        printf("%s\n", stats[i]);
+    }
+
+    /*vado a stampare tanti \n in modo da fare sembrare che la pagina si stia aggiornando in continuazione...*/
+    if(finalPrint == TRUE){
+        for(i=0; i<(size.ws_row - rowCount-4); i++) printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
+    }else{
+        for(i=0; i<(size.ws_row - rowCount-2); i++) printf("\n");
+    }
+
+
+    free(strTmp); /*dealloco strTmp*/
+}
+
+
+
 
 /*
 funzione che controla se la mappa ha zone inaccessibili
