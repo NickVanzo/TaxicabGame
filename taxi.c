@@ -60,7 +60,6 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 		posizione_taxi_y = rand()%SO_HEIGHT;
         availableSpaceOnCell = semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, GETVAL);
 
-        printf("Available space on %d:%d is %d\n", posizione_taxi_x, posizione_taxi_y, availableSpaceOnCell);
 
 	} while(availableSpaceOnCell > 0 && (mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != BLOCK));
 	/*La condizione fa si' che il taxi non spawni dove non gli è consentito, ossia in una cella non ROAD oppure in una cella con availableSpace = taxiOnThisCell*/
