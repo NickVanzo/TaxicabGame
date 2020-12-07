@@ -108,7 +108,6 @@ int main(int argc, char * argv[]) {
     /*creo memoria condivisa*/
     shmKey = ftok("ipcKey.key", 2);
     shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
-        fprintf(stderr, "PADRE: %d\n", shmId);
     if (shmId == -1) {
         /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/
         system("./cleanIpcs.sh");
@@ -489,7 +488,12 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     for (k = 0; k < 2; k++, printedStats++, rowCount++) {
         /*stampo il bordo superiore*/
-        for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("       ", GRAY, GRAY);
+        colorPrintf("       ", GRAY, GRAY);
+        for (i = 0; i < SO_WIDTH + 1; i++){
+            sprintf(strTmp, " %-5d ", i);
+            if(k>0 && i<SO_WIDTH)colorPrintf(strTmp, RED, GRAY);
+            else colorPrintf("       ", GRAY, GRAY);
+        } 
         printf("%s\n", stats[printedStats]);
     }
 
@@ -498,7 +502,8 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
         /*stampo il corpo della mappa*/
-        colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale sx*/
+        sprintf(strTmp, " %5d ", i);
+        colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
           
 	        sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
@@ -569,9 +574,13 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     char stats[12][128];
     const int numberOfStats = 12; /*numero di linee di statistiche da stampare*/
     char * strTmp = (char * ) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
+    struct sembuf sops;
     struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
 
     ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
+
+    sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
+	sops.sem_flg = 0; /*Comportamento di default*/
 
     /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
@@ -602,7 +611,13 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
         sprintf(strTmp, " %-2d ", i);
         colorPrintf(strTmp, RED, DEFAULT); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
+
+            sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
+            semop(mappa->matrice[i][j].mutex, &sops, 1);
             sprintf(strTmp, " %-2d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+            sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
+
+            semop(mappa->matrice[i][j].mutex, &sops, 1);
             if (mappa -> matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                 if ((finalPrint == TRUE) && (mappa -> matrice[i][j].isInTopSoCell == TRUE)) {
