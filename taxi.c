@@ -20,6 +20,7 @@ void settingIpcs(struct grigliaCitta *mappa);
 
 void spostamentoVersoDestinazione(struct grigliaCitta *mappa);
 
+struct sembuf sops; 
 
 int main(int argc, char * argv[]){
 	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
@@ -28,8 +29,11 @@ int main(int argc, char * argv[]){
 
 		srand(getpid());
 		settingIpcs(mappa);
+
     	spawnTaxi(mappa,posizione_taxi_x,posizione_taxi_y);
     	shmdt(mappa);
+
+    	exit(EXIT_SUCCESS);
 }
 
 void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y) {
@@ -41,9 +45,19 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	} while(mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != ROAD || mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace == 0);
 	/*La condizione fa si' che il taxi non spawni dove non gli è consentito, ossia in una cella non ROAD oppure in una cella con availableSpace = taxiOnThisCell*/
 	/*Incremento il numero di semafori presenti nella cella in cui sono spawnato*/
-	semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell, ??, SETVAL, mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++);
-	/*Decremento il numero di posti nella cella in cui sono spawnato*/
-	semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, ??, SETVAL, mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace--);
+
+	sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
+	sops.sem_flg = 0; /*Comportamento di default*/
+	sops.sem_op = -1; /*Decremento la variabile mutex*/
+	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
+	/*Sono dentro la sezione critica*/
+	mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace--;
+	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++;
+	mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+	sops.sem_op = 1; 
+	/*Uscita sezione critica rilasciando la risorsa*/
+	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
+	/*continua*/
 }
 
 void settingIpcs(struct grigliaCitta *mappa) {
