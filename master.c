@@ -200,7 +200,8 @@ int main(int argc, char * argv[]) {
         runningTime++;
         sleep(1);
     }
-    runningTime++;
+    
+    
     aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
 
