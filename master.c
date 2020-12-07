@@ -381,7 +381,7 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
 
         printf("Insert maximum crossing time for each cell: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_TIMENSEC_MIN = atoi(bufferTemp); /*converto da stringa a intero*/
+        * SO_TIMENSEC_MAX = atoi(bufferTemp); /*converto da stringa a intero*/
 
         printf("Insert number of top cells to be shown at the end of the simulation: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
