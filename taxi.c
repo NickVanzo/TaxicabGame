@@ -38,11 +38,45 @@ int main(int argc, char * argv[]){
 	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
 		struct grigliaCitta *mappa; /*mappa della citta*/
 		int so_duration = atoi(argv[1]);
-		
+		int queue_key, queue_id; /*Variabili per la coda di messaggi*/
+	int shm_Key, shm_id; /*Variabili per la memoria condivisa*/
+
+
+	/*Apertura coda di messaggi*/	
+		queue_key = ftok("ipcKey.key", 1);
+		if(queue_key == -1){
+        	printf("Error retriving message queue key!\n");
+        	exit(EXIT_FAILURE);
+    	}	
+
+		queue_id  = msgget(queue_key, IPC_CREAT | 0666);
+		if(queue_id == -1){
+        	printf("Error retriving queue id!\n");
+        	exit(EXIT_FAILURE);
+    	}
+
+		/*Attach alla memoria condivisa*/
+		shm_Key = ftok("ipcKey.key", 2);
+		if(shm_Key == -1){
+        	printf("Error retriving shared memory key!\n");
+        	exit(EXIT_FAILURE);
+    	}
+
+		shm_id = shmget(shm_Key, sizeof(struct grigliaCitta), IPC_CREAT | 0666);
+    	if(shm_id == -1) {
+        	printf("Error retriving shared memory ID!\n");
+        	exit(EXIT_FAILURE);
+    	}
+
+    	mappa = shmat(shm_id, NULL, 0);
+    	if(mappa == (struct grigliaCitta *)(-1)){
+        	printf("Error attaching memory segment!\n");
+        	exit(EXIT_FAILURE);
+    	}
 
 		srand(getpid());
-
 		settingIpcs(mappa);
+
     	spawnTaxi(mappa,posizione_taxi_x,posizione_taxi_y);
     	shmdt(mappa);
 
@@ -54,18 +88,14 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	/*Dubbio è la chiave o l'id del semafoto? Se è la chiave allora devo cambiare il codice perchè non sto facendo la get, se non è la chiave allora non capisco cosa sia sbagliato*/
 	/*Errore ottenuto: non vengono stampati i numeri di taxi presenti nelle celle durante la simulazione*/
 	int availableSpaceOnCell; 
-
+	int i = 0, j = 0;
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o non è una road cambio cella*/
 	do {
 		/*Seleziono un punto random*/
 		posizione_taxi_x = rand()%SO_HEIGHT;
-		posizione_taxi_y = rand()%SO_WIDTH;
-		fprintf(stderr, "ciao");
+		posizione_taxi_y = rand()%SO_WIDTH;	
         availableSpaceOnCell = semctl(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, 0, GETVAL);
-		fprintf(stderr, "ciao");
-
-        fprintf(stderr, "%d", availableSpaceOnCell);
-	} while(availableSpaceOnCell > 0 && (mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != BLOCK));
+	} while(availableSpaceOnCell == 0 && (mappa->matrice[posizione_taxi_x][posizione_taxi_y].cellType != BLOCK));
 	/*La condizione fa si' che il taxi non spawni dove non gli è consentito, ossia in una cella non ROAD oppure in una cella con availableSpace = taxiOnThisCell*/
 	/*Incremento il numero di semafori presenti nella cella in cui sono spawnato*/
 
@@ -74,10 +104,10 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	sops.sem_flg = 0; /*Comportamento di default*/
 	sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
 	/*Abbasso di uno il valore del semaforo availableSpace*/
-	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
+	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
 	/*Sezione critica*/
-	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell = 10;
+	mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++;
 	mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 	sops.sem_op = 1; 
 	/*Uscita sezione critica rilasciando la risorsa*/
@@ -114,7 +144,7 @@ void settingIpcs(struct grigliaCitta *mappa) {
         	exit(EXIT_FAILURE);
     	}
 
-		shm_id = shmget(shm_Key, sizeof(struct grigliaCitta), 0);
+		shm_id = shmget(shm_Key, sizeof(struct grigliaCitta), IPC_CREAT | 0666);
     	if(shm_id == -1) {
         	printf("Error retriving shared memory ID!\n");
         	exit(EXIT_FAILURE);

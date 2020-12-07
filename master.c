@@ -107,11 +107,12 @@ int main(int argc, char * argv[]) {
 
     /*creo memoria condivisa*/
     shmKey = ftok("ipcKey.key", 2);
-    shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0777);
+    shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
+        fprintf(stderr, "PADRE: %d\n", shmId);
     if (shmId == -1) {
         /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/
         system("./cleanIpcs.sh");
-        shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0777);
+        shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
     }
 
     mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
@@ -711,12 +712,12 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
                 /*posso fare in questo modo in quanto una volta che ho creto il semafor, esso non deve essere poi recuperato da altri processi in altre variabili in quanto condividono direttamente già il semaforo bello e pronto*/
                 /*ciclare fino a che non ho un semaforo non valido!*/
                 do{
-                    tmp = mappa -> matrice[i][j].availableSpace = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                    tmp = mappa -> matrice[i][j].availableSpace = semget(IPC_PRIVATE, 1, 0666);
                 }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
                 tmp = -1;
 
                 do{
-                    tmp = mappa->matrice[i][j].mutex = semget(rand() % 12000, 1, IPC_CREAT | IPC_EXCL | 0600);
+                    tmp = mappa->matrice[i][j].mutex = semget(IPC_PRIVATE, 1, 0666);
                 }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
                 
                 /*initi di mutex a 1*/
@@ -728,12 +729,11 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
             /*imposto il valore del semaforo a un numero tra socap min e max*/
             if (SO_CAP_MAX > SO_CAP_MIN) {
                 /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max < min*/
-                semctl(mappa -> matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
-                fprintf(stderr, "%d\n",semctl(mappa -> matrice[i][j].availableSpace, 0, GETVAL));
+                semctl(mappa -> matrice[i][j].availableSpace, 0, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
             } else {
-                semctl(mappa -> matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN);
+                semctl(mappa -> matrice[i][j].availableSpace, 0, SETVAL, SO_CAP_MIN);
             }
-
+    
             mappa -> matrice[i][j].taxiOnThisCell = 0;
             mappa -> matrice[i][j].totalNumberOfTaxiPassedHere = 0;
 
