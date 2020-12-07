@@ -1,4 +1,4 @@
-#include "include_main.h"
+	#include "include_main.h"
 
 int queueKey, queueId;
 struct msgBuf myMessage;
@@ -18,14 +18,13 @@ int main(int argc,  char * argv[]){
     SO_SOURCE = atoi(argv[1]);
     SO_DURATION = atoi(argv[2]);
 
-    
     queueKey = ftok("ipcKey.key", 1);
     if(queueKey == -1){
         printf("Error retriving message queue key!\n");
         exit(EXIT_FAILURE);
     }
 
-    queueId = msgget(queueKey, 0);
+    queueId = msgget(queueKey, IPC_CREAT | 0666);
     if(queueId == -1){
         printf("Error retriving queue id!\n");
         exit(EXIT_FAILURE);

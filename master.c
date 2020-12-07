@@ -100,7 +100,7 @@ int main(int argc, char * argv[]) {
     queueKey = ftok("ipcKey.key", 1);
 
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
-    if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0777)) == -1) {
+    if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0666)) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
@@ -723,13 +723,13 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
                 semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
                 
 
-            }
-            while (mappa -> matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
+            } while (mappa -> matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
 
             /*imposto il valore del semaforo a un numero tra socap min e max*/
             if (SO_CAP_MAX > SO_CAP_MIN) {
                 /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max < min*/
                 semctl(mappa -> matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN)));
+                fprintf(stderr, "%d\n",semctl(mappa -> matrice[i][j].availableSpace, 0, GETVAL));
             } else {
                 semctl(mappa -> matrice[i][j].availableSpace, 1, SETVAL, SO_CAP_MIN);
             }
@@ -743,7 +743,8 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
             } else {
                 mappa -> matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN;
             }
-
+            /*fprintf(stdout,"[%d][%d]%d\n",i,j ,semctl(mappa->matrice[0][0].availableSpace,0,GETVAL));
+            fprintf(stdout,"[%d][%d]%d\n",i,j ,semctl(mappa->matrice[0][0].mutex,0,GETVAL)); DEBUG*/
             mappa -> matrice[i][j].isInTopSoCell = FALSE;
 
         }

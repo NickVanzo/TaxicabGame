@@ -69,6 +69,10 @@
   #include <sys/ioctl.h>
 #endif
 
+#ifndef INCLUDE_MSG
+    #define INCLUDE_MSG
+    #include <sys/msg.h>
+#endif
 
 #ifndef DEFINES
     #define DEFINES
