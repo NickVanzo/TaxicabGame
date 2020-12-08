@@ -78,9 +78,8 @@
     #define DEFINES
 
     /*dimensione della mappa del mondo*/
-    #define SO_WIDTH 20 /*righe*/
-    #define SO_HEIGHT 10 /*colonne*/
-
+    #define SO_WIDTH 10 /*righe*/
+    #define SO_HEIGHT 20 /*colonne*/
 #endif
 
 #ifndef COLORS_SCHEME
@@ -132,6 +131,7 @@ typedef enum{ROAD, BLOCK, SOURCE} cell_type;
 
 /*cella della mappa*/
 typedef struct{
+    int waitForEveryone; /*variabile di tipo semaforo per far siì che prima di muoversi i taxi siano spawnati tutti inizializzato a SO_TAXI in master*/
     cell_type cellType; /*indica il tipo di cella che sto creando */
     int availableSpace; /*spazio disponibile di taxi nella cella. è una variabile di tipo semaforo*/
     int taxiOnThisCell; /*numero intero che indica il numero di taxi presenti nella cella*/
@@ -151,10 +151,8 @@ struct msgBuf{
 
 struct grigliaCitta{
     map_cell matrice[SO_HEIGHT][SO_WIDTH];
+    int aspettaTutti;
 };
-
-
-
 
 #ifndef DEFINE_CUSTOM_FUNCTIONS
     #define DEFINE_CUSTOM_FUNCTIONS

@@ -1,5 +1,11 @@
 #include "include_main.h"
-
+#define TEST_ERROR    if (errno) {fprintf(stderr, \
+                       "%s:%d: PID=%5d: Error %d (%s)\n",\
+                       __FILE__,\
+                       __LINE__,\
+                       getpid(),\
+                       errno,\
+                       strerror(errno));}
 
 /*
     funzione per la stampa in master delle statistiche della cella
@@ -83,64 +89,65 @@ int main(int argc, char * argv[]) {
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
     key_t queueKey;
     int queue_id;
-    int shmId, shmKey;
+    int shmId, shmKey,  shmKey_ForTaxi;
     int * childSourceCreated;
     int * taxiCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
+    int taxiSemaphore_id;
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
+    /*VARIABILI PER LA SINCRONIZZAZIONE DEI TAXI - DEVE ESSERE CARICATA IN MEMORIA CONDIVISA*/
+    struct semaforiPerSincro * semaforoPerTaxi;
 
-    /*avvio setup della simulazione*/
+    /*AVVIO SETUP SIMULAZIONE*/
     setupSimulation( & SO_TAXI, & SO_SOURCES, & SO_HOLES, & SO_CAP_MIN, & SO_CAP_MAX, & SO_TIMENSEC_MIN, & SO_TIMENSEC_MAX, & SO_TOP_CELLS, & SO_TIMEOUT, & SO_DURATION, argc, argv, &printWithAscii);
 
-    /*Creazione coda di messaggi*/
+    /*CREAZIONE CODA DI MESSAGGI*/
     /*Ottengo la chiave per la coda di messaggi*/
     queueKey = ftok("ipcKey.key", 1);
-
     /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
     if ((queue_id = msgget(queueKey, IPC_CREAT | IPC_EXCL | 0666)) == -1) {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
+    /*CODA DI MESSAGGI CREATA CON SUCCESSO*/
 
-    /*creo memoria condivisa*/
+    /*MEMORIA CONDIVISA*/
     shmKey = ftok("ipcKey.key", 2);
     shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
     if (shmId == -1) {
-        /*se non sono riuscito a ottenere il segmanto di memoria è perchè ne ho già uno allocato con quell'id. lo tolfo e poi eseguo di nuovo shmget*/
         system("./cleanIpcs.sh");
         shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
     }
-
-    mappa = shmat(shmId, NULL, 0); /*SHARED MEMORY FOR GRIGLIA*/
-
+    mappa = shmat(shmId, NULL, 0); 
     if (mappa == (struct grigliaCitta * )(-1)) {
         printf("Error at shmat! error code is %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    /*MEMORIA CONDIVISA CREATA CON SUCCESSO*/
 
-    /*imposto handler segnale timer*/
+    /*IMPOSTAZIONE HANDLER SEGNALE TIMER*/
     signal(SIGALRM, signalHandler);
 
-    checkForDegeneresMap(); /*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2*/
+    /*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2*/
+    checkForDegeneresMap(); 
 
-    srand(getpid()); /*init della rand per la funzione di assegnazione*/
-
-    /*creo array contenente i pid dei figli source creati*/
-    childSourceCreated = malloc(SO_SOURCES * sizeof(int));
+    /*init della rand per la funzione di assegnazione*/
+    srand(getpid()); 
 
     /*per debug solo DA TOGLIERE*/
     for (i = 0; i < 6; i++) mapStats[i] = 0;
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES);
 
+    /*CREAZIONE FIGLI SOURCES*/
     /*preparo i parametri da mandare come argomenti alla execlp*/
-
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
-
+    /*creo array contenente i pid dei figli source creati*/
+    childSourceCreated = malloc(SO_SOURCES * sizeof(int));
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
     for (i = 0; i < SO_SOURCES; i++) {
         childSourceCreated[i] = fork();
@@ -160,10 +167,21 @@ int main(int argc, char * argv[]) {
 
         }
     }
+    /*CREAZIONE FIGLI SOURCES AVVENUTA CON SUCCESSO*/
 
+    /*CREAZIONE FIGLI TAXI + INIZIALIZZAZIONE DEI SEMAFORI CHE VENGONO USATI E CONDIVISI IN MEMORIA CON TAXI*/
+
+    shmKey_ForTaxi = ftok("ipcKey.key", 3);    
+    taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
+    /*fprintf(stdout, "VALORE DELL'ID DEL SEMAFORO%d\n", taxiSemaphore_id);*/
+    fprintf(stdout, "VALORE DI SO_TAXI PRIMA:%d\n", SO_TAXI);
+    semctl(taxiSemaphore_id, 0, SETVAL, SO_TAXI);
+    TEST_ERROR;
+    fprintf(stdout, "Valore del semaforo: %d", semctl(taxiSemaphore_id, 0, GETVAL));
+
+    /*fprintf(stderr, "Valore del semaforo aspettaTutti: %d\n", semctl(mappa->aspettaTutti, 0, GETVAL));*/
     /*Creao un array contenente i pid dei figli taxi creati*/
     taxiCreated = malloc(SO_TAXI * sizeof(int));
-    /*faccio la fork per creare i processi taxi*/
     for(i = 0; i < SO_TAXI; i++) {
         taxiCreated[i] = fork();
         switch(taxiCreated[i]) {
@@ -172,15 +190,15 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0: 
-            execlp("./taxi", "taxi", SO_DURATION_PARAM/*, SO_TAXI_PARAM*/);
+            execlp("./taxi", "taxi", SO_DURATION_PARAM, SO_TAXI_PARAM);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
-
         default:
             break;                       
         }
     }
+    /*CREAZIONE DEI FIGLI TAXI AVVENUTA CON SUCCESSO*/
 
     /*Finche' e' FALSE continua ad eseguire la stampa delle statistiche, appena e' FALSE si esce dal programma*/
     exitFromProgram = FALSE;
@@ -204,7 +222,6 @@ int main(int argc, char * argv[]) {
     
     aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
-
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
     if(printWithAscii){
@@ -228,11 +245,11 @@ int main(int argc, char * argv[]) {
         kill(childSourceCreated[i], SIGKILL);
     }
 
+
     free(childSourceCreated);
     free(taxiCreated);
-    /*fprintf(stdout, "%d", shmId);*/
+    semctl(taxiSemaphore_id, 0, IPC_RMID);
     shmctl(shmId, IPC_RMID, NULL);
-
     msgctl(queue_id, IPC_RMID, NULL);
 
     return 0;
