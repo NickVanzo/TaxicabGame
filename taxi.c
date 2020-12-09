@@ -81,6 +81,7 @@ int main(int argc, char * argv[]){
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     	sops.sem_op = 0;
     	semop(taxiSemaphore_id, &sops, 1);
+    	fprintf(stdout,"Ciao ho finito");
 		/*CONTINUA*/
 		srand(getpid());
     	shmdt(mappa);

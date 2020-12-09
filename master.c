@@ -99,7 +99,6 @@ int main(int argc, char * argv[]) {
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
     /*VARIABILI PER LA SINCRONIZZAZIONE DEI TAXI - DEVE ESSERE CARICATA IN MEMORIA CONDIVISA*/
-    struct semaforiPerSincro * semaforoPerTaxi;
 
     /*AVVIO SETUP SIMULAZIONE*/
     setupSimulation( & SO_TAXI, & SO_SOURCES, & SO_HOLES, & SO_CAP_MIN, & SO_CAP_MAX, & SO_TIMENSEC_MIN, & SO_TIMENSEC_MAX, & SO_TOP_CELLS, & SO_TIMEOUT, & SO_DURATION, argc, argv, &printWithAscii);
@@ -174,10 +173,10 @@ int main(int argc, char * argv[]) {
     shmKey_ForTaxi = ftok("ipcKey.key", 3);    
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
     /*fprintf(stdout, "VALORE DELL'ID DEL SEMAFORO%d\n", taxiSemaphore_id);*/
-    fprintf(stdout, "VALORE DI SO_TAXI PRIMA:%d\n", SO_TAXI);
+    /*fprintf(stdout, "VALORE DI SO_TAXI PRIMA:%d\n", SO_TAXI);*/
     semctl(taxiSemaphore_id, 0, SETVAL, SO_TAXI);
     TEST_ERROR;
-    fprintf(stdout, "Valore del semaforo: %d", semctl(taxiSemaphore_id, 0, GETVAL));
+    /*fprintf(stdout, "Valore del semaforo: %d", semctl(taxiSemaphore_id, 0, GETVAL));*/
 
     /*fprintf(stderr, "Valore del semaforo aspettaTutti: %d\n", semctl(mappa->aspettaTutti, 0, GETVAL));*/
     /*Creao un array contenente i pid dei figli taxi creati*/
@@ -223,7 +222,12 @@ int main(int argc, char * argv[]) {
     aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
-
+    
+    /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
+    for (i = 0; i < SO_SOURCES; i++) {
+        kill(childSourceCreated[i], SIGUSR1);
+    }
+    
     if(printWithAscii){
       stampaStatisticheAscii(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
     }else{
@@ -241,9 +245,10 @@ int main(int argc, char * argv[]) {
 
     shmdt(mappa);
 
-    for (i = 0; i < SO_SOURCES; i++) {
-        kill(childSourceCreated[i], SIGKILL);
-    }
+    /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
+    /*for (i = 0; i < SO_SOURCES; i++) {
+        kill(childSourceCreated[i], SIGUSR1);
+    }*/
 
 
     free(childSourceCreated);

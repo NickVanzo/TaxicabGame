@@ -7,6 +7,7 @@ int shmKey, shmId;
 struct grigliaCitta *mappa;
 
 void signalHandler(int signal);
+int exitFromLoop = 0;
 
 int main(int argc,  char * argv[]){
     
@@ -52,15 +53,13 @@ int main(int argc,  char * argv[]){
 
     signal(SIGALRM, signalHandler);
 
-    while(SO_SOURCE > 0){
+    while(exitFromLoop == 0){
         alarm((rand() % SO_DURATION)+1);  
         pause();
-
-        SO_SOURCE--;
     }
     
     shmdt(mappa);
-
+    exit(EXIT_SUCCESS);
 }
 
 
@@ -78,7 +77,9 @@ void signalHandler(int signal){
                 write(1,"Error sending message!\n", strlen("Error sending message!\n"));
             }
             break;
-            
+          case SIGUSR1:
+          	exitFromLoop = 1;
+          	break;
 
         default:
             break;
