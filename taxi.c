@@ -129,7 +129,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
     semop(taxiSemaphore_id, &sops, 1);
 
 /*	fprintf(stderr, "Posizione dopo dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
-	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 5, 5, taxiSemaphore_id);
+	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 3, 3, taxiSemaphore_id);
 }
 
 
@@ -198,7 +198,8 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 
 	}
 	/*Spostamento verso basso*/
-	while(posizione_taxi_x < posizione_taxi_x_finale) {
+	while(posizione_taxi_x != posizione_taxi_x_finale && posizione_taxi_y != posizione_taxi_y_finale) {
+		while(posizione_taxi_x < posizione_taxi_x_finale) {
 /*		fprintf(stderr, "La mia x è minore di dove voglio andare\n"); */
 /*		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);		*/
 
@@ -257,6 +258,8 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 	}
 	fprintf(stderr, "Posizione finale: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
 }
+	}
+	
 
 
 
