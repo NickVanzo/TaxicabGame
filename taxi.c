@@ -16,19 +16,23 @@ void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
 /*
     funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. imposta destX e desY con le coordinate della source più vicina
 
-
-
-	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
-*/
 void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY);
 int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveRight(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 
+
+	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
+*/
 void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int posizione_taxi_x_finale, int posizione_taxi_y_finale, int taxiSemaphore_id);
 
+
+
 struct sembuf sops; 
+
+
+
 
 int main(int argc, char * argv[]){
 	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
@@ -109,6 +113,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	/*Abbasso di uno il valore del semaforo availableSpace*/
     semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
+/*	fprintf(stderr, "Ho preso un mutex I per partire");*/
     semop(taxiSemaphore_id, &sops, 1); /*Abbasso il valore di aspettaTutti cosi nel main è 0*/
 
 	/*Sezione critica*/
@@ -118,11 +123,13 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	sops.sem_op = 1; 
 	/*Uscita sezione critica rilasciando la risorsa*/
 	semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1);
+	/*fprintf(stderr, "Ho rilasciato un mutex I per partire. GO!");*/
+
 	sops.sem_op = 0;
     semop(taxiSemaphore_id, &sops, 1);
 
-	fprintf(stderr, "Posizione dopo dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
-	/*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 0, 2, taxiSemaphore_id);*/
+/*	fprintf(stderr, "Posizione dopo dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
+	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 1, 2, taxiSemaphore_id);
 }
 
 
@@ -133,104 +140,121 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 	/*Questa implementazione non tiene conto delle celle HOLES*/
 	/*Spostamento verso destra*/
 	while(posizione_taxi_y < posizione_taxi_y_finale) { 
-		fprintf(stderr, "La mia y è minore di dove voglio andare\n");
-		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);	
+		/*fprintf(stderr, "La mia y è minore di dove voglio andare\n");*/
+		/*fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);	
 		/*fprintf(stderr, "[%d][%d]", *posizione_taxi_x, *posizione_taxi_y);*/		
 		/*p su available space*/
 		sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
 		sops.sem_flg = 0; /*Comportamento di default*/
 		sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-		fprintf(stderr, "Checkpoint I\n");
+		/*fprintf(stderr, "Checkpoint I\n");*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace, &sops, 1);
 		posizione_taxi_y++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex nuovo*/
+		/*fprintf(stderr, "Ho preso un mutex nuovo al checkpoint I con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex, &sops, 1); /*Ottengo il mutex vecchio*/
+/*		fprintf(stderr, "Ho preso un mutex vecchio al checkpoint I con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		/*SEZIONE CRITICA*/
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/		
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 		/*ESCO DALLA SEZIONE CRITICA*/
 		sops.sem_op = 1; /*Incremento la il semaforo mutex*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace, &sops, 1);
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex nuovo*/
+/*		fprintf(stderr, "Ho rilasciato un mutex nuovo al checkpoint I con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex, &sops, 1); /*Rilascio il mutex vecchio*/
-	
-
-
+/*		fprintf(stderr, "Ho rilasciato un mutex vecchio al checkpoint I con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 	}
 	/*Spostamento verso sinistra*/
 	while(posizione_taxi_y > posizione_taxi_y_finale) { 
-		fprintf(stderr, "La mia y è maggiore di dove voglio andare\n");
-		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);		
+/*		fprintf(stderr, "La mia y è maggiore di dove voglio andare\n");
+/*		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);		*/
 		/*Entro nella sezione critica del semaforo in cui mi sto spostando*/
 		sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
 		sops.sem_flg = 0; /*Comportamento di default*/
 		sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-		fprintf(stderr, "Checkpoint II\n");
+	/*	fprintf(stderr, "Checkpoint II\n");*/
 
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace, &sops, 1);
 		posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex nuovo*/
+	/*	fprintf(stderr, "Ho preso un mutex nuovo al checkpoint II con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex, &sops, 1); /*Ottengo il mutex vecchio*/
+	/*	fprintf(stderr, "Ho preso un mutex vecchio al checkpoint II con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		/*SEZIONE CRITICA*/
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/		
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 		/*ESCO DALLA SEZIONE CRITICA*/
 		sops.sem_op = 1; /*Incremento la il semaforo mutex*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace, &sops, 1);
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex nuovo*/
+/*		fprintf(stderr, "Ho rilasciato un mutex nuovo al checkpoint II con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex, &sops, 1); /*Rilascio il mutex vecchio*/
+/*		fprintf(stderr, "Ho rilasciato un mutex vecchio al checkpoint II con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 	}
-	/*Spostamento verso destra*/
+	/*Spostamento verso basso*/
 	while(posizione_taxi_x < posizione_taxi_x_finale) {
-		fprintf(stderr, "La mia x è minore di dove voglio andare\n"); 
-		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);		
+/*		fprintf(stderr, "La mia x è minore di dove voglio andare\n"); */
+/*		fprintf(stderr, "[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);		*/
 
 		sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
 		sops.sem_flg = 0; /*Comportamento di default*/
 		sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-				fprintf(stderr, "Checkpoint III\n");
+		/*fprintf(stderr, "Checkpoint III\n");*/
 		semop(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace, &sops, 1);
-		semop(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex nuovo*/
 		posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex nuovo*/
+		/*fprintf(stderr, "Ho preso un mutex nuovo al checkpoint III con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex vecchio*/
+		/*fprintf(stderr, "Ho preso un mutex vecchio al checkpoint III con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
+
 		/*SEZIONE CRITICA*/
 		mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/		
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 		/*ESCO DALLA SEZIONE CRITICA*/
 		sops.sem_op = 1; /*Incremento la il semaforo mutex*/
-		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].availableSpace, &sops, 1);
+		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace, &sops, 1);
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex nuovo*/
+	/*	fprintf(stderr, "Ho rilasciato un mutex nuovo al checkpoint III con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex vecchio*/
-	
+	/*	fprintf(stderr, "Ho rilasciato un mutex vecchio al checkpoint III con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 	}
 	/*Spostamento verso l'alto*/
 	while(posizione_taxi_x > posizione_taxi_x_finale) { 
-		fprintf(stderr, "La mia x è maggiore di dove voglio andare\n");
-		fprintf(stderr, "[%d][%d]", posizione_taxi_x, posizione_taxi_y);		
+	/*	fprintf(stderr, "La mia x è maggiore di dove voglio andare\n");
+/*		fprintf(stderr, "[%d][%d]", posizione_taxi_x, posizione_taxi_y);		*/
 
 		sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
 		sops.sem_flg = 0; /*Comportamento di default*/
 		sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-		fprintf(stderr, "Checkpoint IV\n");
+		/*fprintf(stderr, "Checkpoint IV\n");*/
 		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace, &sops, 1);
 		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex nuovo*/
+		/*fprintf(stderr, "Ho preso un mutex nuovo al checkpoint IV con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 		semop(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex, &sops, 1); /*Ottengo il mutex vecchio*/
+/*		fprintf(stderr, "Ho preso un mutex nuovo al checkpoint IV con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		/*SEZIONE CRITICA*/
 		mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/		
 		mappa->matrice[posizione_taxi_x][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
 		/*ESCO DALLA SEZIONE CRITICA*/
 		sops.sem_op = 1; /*Incremento la il semaforo mutex*/
-		semop(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace, &sops, 1);
+		semop(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace, &sops, 1);
+/*		fprintf(stderr, "Ho aumentato il valore di availableSpace\n");		*/
 		semop(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex nuovo*/
+/*		fprintf(stderr, "Ho aumentato il valore di mutex\n");		*/
+/*		fprintf(stderr, "Ho lasciato un mutex nuovo al checkpoint IV con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 		semop(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex, &sops, 1); /*Rilascio il mutex vecchio*/
-		
+/*		fprintf(stderr, "Ho lasciato un mutex nuovo al checkpoint IV con coordinate [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 	}
-	fprintf(stderr, "Posizione finale: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
+/*	fprintf(stderr, "Posizione finale: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
 }
 
 
@@ -244,14 +268,7 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 
 
 
-void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY){
-    int tempX = taxiX, tempY= taxiY;
-    int rangeX = 3, rangeY = 3;
-    int sourceFound = 0;
-    while(sourceFound == 0){
 
-        tempX = taxiX - ((rangeX-1)/2); /*mi sposto come punto di inzio della ricerca nella cella in alto a sx nella diagonale*/
-        tempY = taxiY - ((rangeY -1)/2);
 
         sourceFound = closestMoveUpper(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
 
@@ -262,12 +279,7 @@ void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX,
         if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
 
 
-        /*incremento il range su cui devo controllare los corrimento*/
-        rangeX += 2;
-        rangeY += 2;
-    }
 
-}
 
 int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
     int i = 0;
