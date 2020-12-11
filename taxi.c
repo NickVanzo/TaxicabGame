@@ -253,13 +253,13 @@ void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX,
         tempX = taxiX - ((rangeX-1)/2); /*mi sposto come punto di inzio della ricerca nella cella in alto a sx nella diagonale*/
         tempY = taxiY - ((rangeY -1)/2);
 
-        sourceFound = closestMoveUpper(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
+        sourceFound = closestMoveUpper(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
 
-        if(sourceFound == 0)  sourceFound = closestMoveRight(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
+        if(sourceFound == 0)  sourceFound = closestMoveRight(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
         
-        if(sourceFound == 0)  sourceFound = closestMoveLower(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
+        if(sourceFound == 0)  sourceFound = closestMoveLower(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
 
-        if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
+        if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
 
 
         /*incremento il range su cui devo controllare los corrimento*/
@@ -273,8 +273,8 @@ int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int ran
     int i = 0;
     *tempX ++;/*mi sposto di una cella a destra di quella in diagonale per potere mantenere uniforme il codice*/
         for(i=0;i<rangeX-1;i++){ /*scorro la linea superiore*/    
-           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){ //vado a controllare la matrice solamente se mi trovo dentro l'intervallo delle dimensioni della mappa
-               if(mappa->matrice[tempX][tempY].cellType == SOURCE){
+           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){ /*vado a controllare la matrice solamente se mi trovo dentro l'intervallo delle dimensioni della mappa*/
+               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
                     *destX = *tempX;
                     *destY = *tempY;
                     return 1;
@@ -288,17 +288,17 @@ int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int ran
 
 int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
     int i = 0;
-     tempY++; /*ho già controllato che la cella non sia una source. mi sopsto sotto di uno*/
+     *tempY++; /*ho già controllato che la cella non sia una source. mi sopsto sotto di uno*/
         
         for(i=0;i<rangeY-1;i++){ /*controllo la linea a destra*/
-            if(tempX>=0 && tempY>=0 && tempY<SO_HEIGHT && tempY < SO_WIDTH){
-               if(mappa->matrice[tempX][tempY].cellType == SOURCE){
-                    *destX = tempX;
-                    *destY = tempY;
+            if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
+               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
+                    *destX = *tempX;
+                    *destY = *tempY;
                     return 1;
                 }
            }
-           tempY++;/*mi sposto di sotto*/
+           *tempY++;/*mi sposto di sotto*/
         }
         return 0;
 }
@@ -306,17 +306,17 @@ int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int ran
 
 int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
     int i = 0;
-     tempX --; /*mi sposto indietro di uno*/
+     *tempX --; /*mi sposto indietro di uno*/
 
         for(i=0;i<rangeX-1;i++){ /*scorro la linea inferiore*/    
-           if(tempX>=0 && tempY>=0 && tempY<SO_HEIGHT && tempY < SO_WIDTH){
-               if(mappa->matrice[tempX][tempY].cellType == SOURCE){
-                    *destX = tempX;
-                    *destY = tempY;
+           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
+               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
+                    *destX = *tempX;
+                    *destY = *tempY;
                     return 1;
                 }
            }
-           tempX--; /*mi sposto a destra*/
+           *tempX--; /*mi sposto a destra*/
         }
         return 0;
 }
@@ -324,17 +324,17 @@ int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rang
 
 int closestMoveRight(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
     int i = 0;
-      tempY--; /*mi sposto di una cella in sopra*/
+      *tempY--; /*mi sposto di una cella in sopra*/
 
         for(i=0;i<rangeY-1;i++){ /*scorro la linea a sinistra*/    
-           if(tempX>=0 && tempY>=0 && tempY<SO_HEIGHT && tempY < SO_WIDTH){
-               if(mappa->matrice[tempX][tempY].cellType == SOURCE){
-                    *destX = tempX;
-                    *destY = tempY;
+           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
+               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
+                    *destX = *tempX;
+                    *destY = *tempY;
                     return 1;
                 }
            }
-           tempY--; /*mi sposto a destra*/
+           *tempY--; /*mi sposto a destra*/
         }
         return 0;
 }
