@@ -203,6 +203,11 @@ int main(int argc, char * argv[]) {
     exitFromProgram = FALSE;
     /*imposto durata simulazione*/
     alarm(SO_DURATION);
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][4].availableSpace, 0, GETVAL));
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][5].availableSpace, 0, GETVAL));
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][3].availableSpace, 0, GETVAL));
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[9][4].availableSpace, 0, GETVAL));
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[10][4].availableSpace, 0, GETVAL));
 
     while (!exitFromProgram) {
         
@@ -234,6 +239,7 @@ int main(int argc, char * argv[]) {
       stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
     }
 
+    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][4].availableSpace, 0, GETVAL));
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for (i = 0; i < SO_HEIGHT; i++) {
         for (j = 0; j < SO_WIDTH; j++) {
@@ -529,9 +535,9 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
           
-	        /*sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-            /*semop(mappa->matrice[i][j].mutex, &sops, 1);
-          */  sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+	      /*  sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
+          /*  semop(mappa->matrice[i][j].mutex, &sops, 1);
+       */     sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
          /*   sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
            /* semop(mappa->matrice[i][j].mutex, &sops, 1);
 */
@@ -771,7 +777,7 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
             } else {
                 semctl(mappa -> matrice[i][j].availableSpace, 0, SETVAL, SO_CAP_MIN);
             }
-    
+
             mappa -> matrice[i][j].taxiOnThisCell = 0;
             mappa -> matrice[i][j].totalNumberOfTaxiPassedHere = 0;
 
