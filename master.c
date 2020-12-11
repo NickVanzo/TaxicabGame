@@ -514,7 +514,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         colorPrintf("       ", GRAY, GRAY);
         for (i = 0; i < SO_WIDTH + 1; i++){
             sprintf(strTmp, " %-5d ", i);
-            if(k>0 && i<SO_WIDTH)colorPrintf(strTmp, RED, GRAY);
+            if(k>0 && i<SO_WIDTH) colorPrintf(strTmp, RED, GRAY);
             else colorPrintf("       ", GRAY, GRAY);
         } 
         printf("%s\n", stats[printedStats]);
@@ -553,7 +553,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         }
 
         colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
-        if (i < numberOfStats) {
+        if (printedStats < numberOfStats) {
             printf("%s\n", stats[printedStats]);
             printedStats++;
         } else {
@@ -574,7 +574,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     }
 
     /*controllo che ho stampato tutti gli stats e se non lo ho fatto stampo quelli che mancano allineandoli agli altri sotto*/
-    if (printedStats < 12) {
+    if (printedStats < numberOfStats) {
         for (i = printedStats; i < numberOfStats; i++, rowCount++) {
             for (j = 0; j < 7 * (SO_WIDTH + 2); j++) printf(" ");
             printf("%s\n", stats[i]);
