@@ -270,14 +270,30 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 
 
 
-        sourceFound = closestMoveUpper(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
+void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY){
+    int tempX = taxiX, tempY= taxiY;
+    int rangeX = 3, rangeY = 3;
+    int sourceFound = 0;
+    while(sourceFound == 0){
 
-        if(sourceFound == 0)  sourceFound = closestMoveRight(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
+        tempX = taxiX - ((rangeX-1)/2); /*mi sposto come punto di inzio della ricerca nella cella in alto a sx nella diagonale*/
+        tempY = taxiY - ((rangeY -1)/2);
+
+        sourceFound = closestMoveUpper(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
+
+        if(sourceFound == 0)  sourceFound = closestMoveRight(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
         
-        if(sourceFound == 0)  sourceFound = closestMoveLower(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
+        if(sourceFound == 0)  sourceFound = closestMoveLower(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
 
-        if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
+        if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, &destX, &destY, rangeX, rangeY, &tempX, &tempY);
 
+
+        /*incremento il range su cui devo controllare los corrimento*/
+        rangeX += 2;
+        rangeY += 2;
+    }
+
+}
 
 
 
