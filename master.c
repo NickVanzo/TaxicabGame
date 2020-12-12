@@ -189,7 +189,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0: 
-            execlp("./taxi", "taxi",SO_DURATION_PARAM ,SO_TAXI_PARAM, NULL);
+            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
