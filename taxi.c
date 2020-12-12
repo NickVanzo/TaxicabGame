@@ -1,3 +1,4 @@
+
 #include "include_main.h"
 #define TEST_ERROR    if (errno) {fprintf(stderr, \
 					   "%s:%d: PID=%5d: Error %d (%s)\n",\
@@ -15,23 +16,17 @@ void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
 
 /*
     funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. imposta destX e desY con le coordinate della source più vicina
-
 void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY);
 int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveRight(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
 int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
-
-
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
 */
 void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int posizione_taxi_x_finale, int posizione_taxi_y_finale, int taxiSemaphore_id);
 
 
-
 struct sembuf sops; 
-
-
 
 
 int main(int argc, char * argv[]){
@@ -127,7 +122,8 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	sops.sem_op = 0;
     semop(taxiSemaphore_id, &sops, 1);
 
-	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 8, 4, taxiSemaphore_id);
+    moveTo( mappa, &posizione_taxi_x, &posizione_taxi_y, 8, 4);
+	/*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 8, 4, taxiSemaphore_id);*/
 }
 
 
@@ -266,5 +262,4 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
     idea: mi sposto a spirale nel cercare la so source piu vicina. per rendere il codice dell'algoritmo piu semplice però, mi immagino che il mio campo di 
     ricerca sia effettivamente piu grande della dimensione della mappa: ovvero mi immagino di creare una griglia abbastanza grande da centr
 */
-
 

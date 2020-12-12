@@ -189,7 +189,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0: 
-            execlp("./taxi", "taxi", SO_DURATION_PARAM, SO_TAXI_PARAM);
+            execlp("./taxi", "taxi",SO_DURATION_PARAM ,SO_TAXI_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
@@ -203,11 +203,8 @@ int main(int argc, char * argv[]) {
     exitFromProgram = FALSE;
     /*imposto durata simulazione*/
     alarm(SO_DURATION);
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][4].availableSpace, 0, GETVAL));
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][5].availableSpace, 0, GETVAL));
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][3].availableSpace, 0, GETVAL));
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[9][4].availableSpace, 0, GETVAL));
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[10][4].availableSpace, 0, GETVAL));
+    for(i = 0; i < SO_HEIGHT; i++) {
+    }
 
     while (!exitFromProgram) {
         
@@ -239,7 +236,6 @@ int main(int argc, char * argv[]) {
       stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
     }
 
-    fprintf(stderr, "VALORE CAPIEZNA %d\n",semctl(mappa -> matrice[8][4].availableSpace, 0, GETVAL));
     /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
     for (i = 0; i < SO_HEIGHT; i++) {
         for (j = 0; j < SO_WIDTH; j++) {
