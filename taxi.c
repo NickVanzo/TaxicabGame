@@ -130,7 +130,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	sops.sem_op = 0;
     semop(taxiSemaphore_id, &sops, 1);
 
-	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 5, 5, taxiSemaphore_id);
+	moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 15, 8, taxiSemaphore_id);
 }
 
 
@@ -431,6 +431,9 @@ void moveTowards_sosource(struct grigliaCitta *mappa, int posizione_taxi_x, int 
 					}
 				}	
 		}
+			if(posizione_taxi_x != posizione_taxi_x_finale || posizione_taxi_y != posizione_taxi_y_finale) {
+				moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 15, 8, taxiSemaphore_id);
+			}
 	}
 
 	
