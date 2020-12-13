@@ -120,7 +120,7 @@ int main(int argc, char * argv[]) {
         system("./cleanIpcs.sh");
         shmId = shmget(shmKey, sizeof(struct grigliaCitta), IPC_CREAT | IPC_EXCL | 0666);
     }
-    mappa = shmat(shmId, NULL, 0); 
+    mappa = shmat(shmId, NULL, 0);
     if (mappa == (struct grigliaCitta * )(-1)) {
         printf("Error at shmat! error code is %s", strerror(errno));
         exit(EXIT_FAILURE);
@@ -131,10 +131,10 @@ int main(int argc, char * argv[]) {
     signal(SIGALRM, signalHandler);
 
     /*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2*/
-    checkForDegeneresMap(); 
+    checkForDegeneresMap();
 
     /*init della rand per la funzione di assegnazione*/
-    srand(getpid()); 
+    srand(getpid());
 
     /*per debug solo DA TOGLIERE*/
     for (i = 0; i < 6; i++) mapStats[i] = 0;
@@ -170,7 +170,7 @@ int main(int argc, char * argv[]) {
 
     /*CREAZIONE FIGLI TAXI + INIZIALIZZAZIONE DEI SEMAFORI CHE VENGONO USATI E CONDIVISI IN MEMORIA CON TAXI*/
 
-    shmKey_ForTaxi = ftok("ipcKey.key", 3);    
+    shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
     /*fprintf(stdout, "VALORE DELL'ID DEL SEMAFORO%d\n", taxiSemaphore_id);*/
     /*fprintf(stdout, "VALORE DI SO_TAXI PRIMA:%d\n", SO_TAXI);*/
@@ -188,13 +188,13 @@ int main(int argc, char * argv[]) {
             printf("Error while trying to fork()! %s\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
-        case 0: 
+        case 0:
             execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
         default:
-            break;                       
+            break;
         }
     }
     /*CREAZIONE DEI FIGLI TAXI AVVENUTA CON SUCCESSO*/
@@ -207,7 +207,7 @@ int main(int argc, char * argv[]) {
     }
 
     while (!exitFromProgram) {
-        
+
         aggiornaStatistiche(mappa, mapStats, 6);
 
         if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
@@ -219,17 +219,17 @@ int main(int argc, char * argv[]) {
         runningTime++;
         sleep(1);
     }
-    
-    
+
+
     aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
-    
+
     /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
     for (i = 0; i < SO_SOURCES; i++) {
         kill(childSourceCreated[i], SIGUSR1);
     }
-    
+
     if(printWithAscii){
       stampaStatisticheAscii(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
     }else{
@@ -491,7 +491,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     const int numberOfStats = 13; /*numero di linee di statistiche da stampare*/
     char * strTmp = (char * ) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf. uso la malloc perchè mi piace*/
     struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
-    struct sembuf sops; 
+    struct sembuf sops;
 
     ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
 
@@ -518,7 +518,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
             sprintf(strTmp, " %-5d ", i);
             if(k>0 && i<SO_WIDTH) colorPrintf(strTmp, RED, GRAY);
             else colorPrintf("       ", GRAY, GRAY);
-        } 
+        }
         printf("%s\n", stats[printedStats]);
     }
 
@@ -530,13 +530,13 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         sprintf(strTmp, " %5d ", i);
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
-          
-	      /*  sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-          /*  semop(mappa->matrice[i][j].mutex, &sops, 1);
-       */     sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-         /*   sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
-           /* semop(mappa->matrice[i][j].mutex, &sops, 1);
-*/
+
+	             sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
+              semop(mappa->matrice[i][j].mutex, &sops, 1);
+              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
+              semop(mappa->matrice[i][j].mutex, &sops, 1);
+
 
             if (mappa -> matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
@@ -759,10 +759,10 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
                 do{
                     tmp = mappa->matrice[i][j].mutex = semget(IPC_PRIVATE, 1, 0666);
                 }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
-                
+
                 /*initi di mutex a 1*/
                 semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
-                
+
 
             } while (mappa -> matrice[i][j].availableSpace == -1); /*fino a che non ottengo un semaforo valido allora continuo a tentare di ottenerne uno. potrebbe essere  che rand()%12000 dia un id già occupato ma ipc_excl ritornerebbe -1. quindi continuo fino a che ne ho uno valido*/
 
