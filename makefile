@@ -9,8 +9,8 @@ master: master.o utils.o taxi
 source: source.o
 	$(CC) source.o -o source
 
-taxi: taxi.o 	
-	$(CC) taxi.o -o taxi
+taxi: taxi.o utils.c	
+	$(CC) taxi.o utils.o -o taxi
 
 source.o: source.c
 	$(CC) -c source.c -o source.o

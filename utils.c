@@ -108,3 +108,20 @@ void colorPrintf(char *message, enum color colore, enum color bgcolore){
 
     printf("%s%s%s", message, C_DEFAULT, BG_C_DEFAULT);
 }
+
+
+void P(int semaphore){
+    struct sembuf sops;
+    sops.sem_flg = 0;
+    sops.sem_num = 0;
+    sops.sem_op = -1;
+    semop(semaphore, &sops, 1);
+}
+
+void V(int semaphore){
+    struct sembuf sops;
+    sops.sem_flg = 0;
+    sops.sem_num = 0;
+    sops.sem_op = 1;
+    semop(semaphore, &sops, 1);
+}

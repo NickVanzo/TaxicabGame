@@ -167,5 +167,12 @@ struct grigliaCitta{
     int pointToID(struct grigliaCitta* mappa, int x, int y, int SO_SOURCES);
 
 
+    /*
+        FUNZIONI DI GESTIONE DEI SEMAFORI
+        sono defineite dentro il file utils.c
+    */
+    void P(int semaphore);
+    void V(int semaphore);
+
 
 #endif

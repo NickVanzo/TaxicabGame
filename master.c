@@ -531,11 +531,10 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
 
-	             sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-              semop(mappa->matrice[i][j].mutex, &sops, 1);
+	           
+              P(mappa->matrice[i][j].mutex);
               sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-              sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
-              semop(mappa->matrice[i][j].mutex, &sops, 1);
+              V(mappa->matrice[i][j].mutex);
 
 
             if (mappa -> matrice[i][j].cellType == ROAD) {
@@ -625,7 +624,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     printf("    ");
     for (k = 0; k < SO_WIDTH; k++) {
         /*stampo il bordo superiore*/
-        sprintf(strTmp, " %-2d ", k);
+        sprintf(strTmp, " %-3d ", k);
         colorPrintf(strTmp, RED, DEFAULT);
     }
     printf("\n");
@@ -637,12 +636,10 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
         colorPrintf(strTmp, RED, DEFAULT); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
 
-            sops.sem_op = -1; /*Decremento la variabile mutex e la variabile availableSpace*/
-            semop(mappa->matrice[i][j].mutex, &sops, 1);
-            sprintf(strTmp, " %-2d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-            sops.sem_op = 1; /*Decremento la variabile mutex e la variabile availableSpace*/
+              P(mappa->matrice[i][j].mutex);
+              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              V(mappa->matrice[i][j].mutex);
 
-            semop(mappa->matrice[i][j].mutex, &sops, 1);
             if (mappa -> matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                 if ((finalPrint == TRUE) && (mappa -> matrice[i][j].isInTopSoCell == TRUE)) {
