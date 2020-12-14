@@ -39,7 +39,7 @@ struct msgBuf myMessage;
 int SO_TIMEOUT;
 
 int main(int argc, char * argv[]){
-	  	int *posizione_taxi_x, *posizione_taxi_y; /*Coordinate della posizione del taxi*/
+	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
 		struct grigliaCitta *mappa; /*mappa della citta*/
         int tempx, tempy;
 		int so_taxi = atoi(argv[2]); /*recupero il numero di taxi nella simulazione*/
@@ -47,8 +47,6 @@ int main(int argc, char * argv[]){
 		int taxiSemaphore_id;
 		int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
 		int posizione_taxi_x_finale, posizione_taxi_y_finale;
-		posizione_taxi_x = malloc(sizeof(int));
-		posizione_taxi_y = malloc(sizeof(int));
 
 
         /*gestisco il segnale di allarme per uscire*/
@@ -92,21 +90,21 @@ int main(int argc, char * argv[]){
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
 		srand(getpid());
-    	spawnTaxi(mappa, posizione_taxi_x, posizione_taxi_y, taxiSemaphore_id, queue_id);
+    	spawnTaxi(mappa, &posizione_taxi_x, &posizione_taxi_y, taxiSemaphore_id, queue_id);
 
 
-    	fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
-    	closestSource(mappa, *posizione_taxi_x, *posizione_taxi_y, &posizione_taxi_x_finale, &posizione_taxi_y_finale);
+    	fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
+    	closestSource(mappa, posizione_taxi_x, posizione_taxi_y, &posizione_taxi_x_finale, &posizione_taxi_y_finale);
 
     	fprintf(stderr, "La source più vicina è: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);
-    	move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
+    	move(mappa, &posizione_taxi_x, &posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 
-    	fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
-    	getRide(queue_id, enumSoSources(mappa, posizione_taxi_x, posizione_taxi_y));
+    	fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
+    	getRide(queue_id, enumSoSources(mappa, &posizione_taxi_x, &posizione_taxi_y));
     
     	fprintf(stderr, "Devo andare verso: [%d][%d]\n", myMessage.xDest, myMessage.yDest);
-    	move(mappa, posizione_taxi_x, posizione_taxi_y, myMessage.xDest, myMessage.yDest);
-   		fprintf(stderr, "Sono arrivato a destinazione: [%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
+    	move(mappa, &posizione_taxi_x, &posizione_taxi_y, myMessage.xDest, myMessage.yDest);
+   		fprintf(stderr, "Sono arrivato a destinazione: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
 
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     	shmdt(mappa);
@@ -160,7 +158,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione
 
 void getRide(int msg_id, long so_source) {
 	if(msgrcv(msg_id, &myMessage, 2*sizeof(int), so_source, 0) == -1) {
-		fprintf(stderr, "Errore codice: %d (%s)", errno, strerror(errno));
+		fprintf(stderr, "Errore codice: %d (%s)\nsono in getRide()", errno, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 }
