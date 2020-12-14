@@ -394,110 +394,27 @@ void signalHandler(int signalNo){
 
 
 void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR, int *destC){
-    /*
-        idea: scorro la matrice in 4 sensi diversi e ottengo 4 coordinate e poi mi prendo i punti più vicini di quei quattro. lo faccio in un unico metodo
-
-    */
+   
    int i=0, j=0;
-   int possibleRcoordinates[4];
-   int possibleCcoordinates[4];
-   int countR = 0;
-   int countC = 0;
    int minDistance = INT_MAX;
    int positionOfMinDistance = 0, tmp;
 
-   boolean exitLoop = FALSE;
+   if(mappa->matrice[taxiR][taxiC].cellTypeù == SOURCE) return;
 
-    /*scorro da alto a basso, da sx a dx*/
-    for(i=taxiR; !exitLoop && (countR < SO_HEIGHT); i++){
-        countC=0;
-        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j++){
-            if(mappa->matrice[i][j].cellType == SOURCE){
-                exitLoop = TRUE;
-                possibleRcoordinates[0] = i;
-                possibleCcoordinates[0] = j;
+    for(i=0;i<SO_HEIGHT;i++){
+        for(j=0;j<SO_WIDTH;j++){
+            if(mappa->matrice[i][j].cellType == SOURCE && i!=taxiR && j!=taxiC){
+                tmp = (int) sqrt(pow(taxiR-i, 2) + pow(taxiC - j, 2));
+                if(tmp < minDistance){
+                    minDistance = tmp;
+                    *destR = i;
+                    *destC = j;
+                }
             }
-            countC++;
-            if(j==(SO_WIDTH-1)) j = -1; 
         }
-        countR++;
-        if(i==(SO_HEIGHT - 1)) i = -1;
     }
 
-    exitLoop = FALSE;
-    countR = 0;
-    countC = 0;
-    /*scorro da alto a basso, da dx a sx*/
-    for(i=taxiR; !exitLoop && (countR < SO_HEIGHT); i++){
-        countC = 0;
-        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j--){
-            if(mappa->matrice[i][j].cellType == SOURCE){
-                exitLoop = TRUE;
-                possibleRcoordinates[1] = i;
-                possibleCcoordinates[1] = j;
-            }
-            countC++;
-            if(j==0) j = SO_WIDTH;
-        }
-        countR++;
-        if(i==(SO_HEIGHT - 1)) i = -1;
-    }
-
-      /*
-        ora come sopra ma scorro prima le colonne e poi le righe
-    */
-    exitLoop = FALSE;
-    countR = 0;
-    countC = 0;
-   /*scorro da alto a basso, da sx a dx*/
-    for(i=taxiR; !exitLoop && (countC < SO_WIDTH); i++){
-        countR = 0;
-        for(j=taxiC; !exitLoop && (countR < SO_HEIGHT); j++){
-            if(mappa->matrice[j][i].cellType == SOURCE){
-                exitLoop = TRUE;
-                possibleRcoordinates[2] = i;
-                possibleCcoordinates[2] = j;
-            }
-            countR++;
-            if(j==(SO_HEIGHT-1)) j = -1;
-        }
-        countC++;
-        if(i==(SO_WIDTH - 1)) i = -1;
-    }
-
-
-    exitLoop = FALSE;
-    countR = 0;
-    countC = 0;
-   /*scorro da alto a basso, da sx a dx*/
-    for(i=taxiC; !exitLoop && (countC < SO_WIDTH); i++){
-        countR = 0;
-        for(j=taxiR; !exitLoop && (countR < SO_HEIGHT); j--){
-            if(mappa->matrice[j][i].cellType == SOURCE){
-                exitLoop = TRUE;
-                possibleRcoordinates[3] = i;
-                possibleCcoordinates[3] = j;
-            }
-            countR++;
-            if(j==0) j = SO_HEIGHT;
-        }
-        countC++;
-        if(i==(SO_WIDTH - 1)) i = -1;
-    }
     
-    
-  
-
-    for(i=0;i<4;i++){
-        tmp = (int) sqrt(pow(taxiR-possibleRcoordinates[i], 2) + pow(taxiC - possibleCcoordinates[i], 2));
-        if(tmp < minDistance){
-            minDistance = tmp;
-            positionOfMinDistance = i;
-        }
-    }
-
-    *destR = possibleRcoordinates[positionOfMinDistance];
-    *destC = possibleCcoordinates[positionOfMinDistance];
 
 
 }
