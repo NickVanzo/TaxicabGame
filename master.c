@@ -39,7 +39,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
 /*
     Funzione per aggiornare le statistiche
 */
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId);
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -47,7 +47,6 @@ void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQu
     Inoltre stampa un riepilogo dei parametri e informa l'utente della dimensione consigliata dello schermo
     aspetta infine che l'utente prenma un tasto per iniziare  la simulazione per potere andare a stampare in continuo.
     in questo modo utente ha tempo di aggiustare lo schermo e controllare che i parametri inseriti sono validi
-
 */
 void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_CAP_MIN, int * SO_CAP_MAX, int * SO_TIMENSEC_MIN, int * SO_TIMENSEC_MAX, int * SO_TOP_CELLS, int * SO_TIMEOUT, int * SO_DURATION, int argc, char * argv[], boolean *printWithAscii);
 
@@ -78,8 +77,6 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 
 boolean exitFromProgram;
 
-
-
 /*
     funzione per gestire eventuali segnali guinti al processo
 */
@@ -90,6 +87,7 @@ int main(int argc, char * argv[]) {
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION; /*parametri letti o inseriti a compilazione*/
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
     key_t queueKey;
+    int trash_status;
     int queue_id;
     int shmId, shmKey,  shmKey_ForTaxi;
     int * childSourceCreated;
@@ -97,7 +95,6 @@ int main(int argc, char * argv[]) {
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
     int taxiSemaphore_id;
-    int trashKillSignal; /*variabile temporanea usata per attendere la morte dei fligli e svuotare la tabella dei processi*/
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
@@ -130,12 +127,6 @@ int main(int argc, char * argv[]) {
     }
     /*MEMORIA CONDIVISA CREATA CON SUCCESSO*/
 
-    /*INIZIALIZZO I DATI DELLE STATISTICHE DELLA MAPPA*/
-    mappa->AbortedRides=0;
-    mappa->succesfulRides = 0;
-    mappa->mutex = semget(rand(), 1, IPC_CREAT | IPC_EXCL | 0666); /*ottengo un semaforo per la modifica e la lettura dei dati*/
-    semctl(mappa -> mutex, 0, SETVAL,1);
-
     /*IMPOSTAZIONE HANDLER SEGNALE TIMER*/
     signal(SIGALRM, signalHandler);
 
@@ -154,9 +145,6 @@ int main(int argc, char * argv[]) {
     /*preparo i parametri da mandare come argomenti alla execlp*/
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
-    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
-    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
-
     /*creo array contenente i pid dei figli source creati*/
     childSourceCreated = malloc(SO_SOURCES * sizeof(int));
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
@@ -201,7 +189,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, NULL);
+            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
@@ -220,7 +208,7 @@ int main(int argc, char * argv[]) {
 
     while (!exitFromProgram) {
 
-        aggiornaStatistiche(mappa, mapStats, queue_id);
+        aggiornaStatistiche(mappa, mapStats, 6);
 
         if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
           stampaStatisticheAscii(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
@@ -233,7 +221,7 @@ int main(int argc, char * argv[]) {
     }
 
 
-    aggiornaStatistiche(mappa, mapStats, queue_id);
+    aggiornaStatistiche(mappa, mapStats, 6);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
@@ -256,29 +244,21 @@ int main(int argc, char * argv[]) {
 
         }
     }
-
     
+    for(i = 0; i < SO_SOURCES; i++) {
+        kill(childSourceCreated[i], SIGKILL);
+        waitpid(childSourceCreated[i], &trash_status );
+    }
 
-   
+    for(i = 0; i < SO_TAXI; i++) {
+        kill(taxiCreated[i], SIGKILL);
+        waitpid(taxiCreated[i], &trash_status );
+    }
 
-   /*attendo la morte di tutti i figli*/
-   for(i = 0; i<SO_TAXI; i++){
-       kill(taxiCreated[i], SIGKILL); /*da sostituire con un segnale specifico!!!*/
-       waitpid(taxiCreated[i], &trashKillSignal);
-   }
-
-   for(i=0;i<SO_SOURCES;i++){
-       kill(childSourceCreated[i], SIGKILL);
-       waitpid(childSourceCreated[i], &trashKillSignal);
-   }
-
-
-    /*dealloco le risorse create nel programma*/
     free(childSourceCreated);
     free(taxiCreated);
-    semctl(taxiSemaphore_id, 0, IPC_RMID);
-    semctl(mappa->mutex, 0, IPC_RMID);
     shmdt(mappa);
+    semctl(taxiSemaphore_id, 0, IPC_RMID);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
 
@@ -309,6 +289,10 @@ void spawnBlocks(struct grigliaCitta * mappa, int SO_HOLES) {
             /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
             mappa -> matrice[k][q].cellType = BLOCK;
             mappa -> matrice[k][q].availableForHoles = 0;
+
+            #ifdef DEBUG_BLOCK
+            fprintf(stdout, "%d - Posizionato buco in posizione %d%d\n", numeroBuchi, k, q);
+            #endif
             /*La cella su cui posiziono il buco non potra' contenere altri buchi e nemmeno le 8 celle che ha intorno potranno*/
 
             /*marco come inutilizzabili per contenere buchi le celle intorno alla cella su cui ho posizionato il buco*/
@@ -521,7 +505,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
-    sprintf(stats[6], "%s%d", " | Taxi with most succesful rides: ", statistiche[5]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
     sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
     sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
     sprintf(stats[9], "%s", " | \033[40m  \033[49m -> Black shows blocked zones");
@@ -542,7 +526,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     }
 
     sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
-	sops.sem_flg = 0; /*Comportamento di default*/
+    sops.sem_flg = 0; /*Comportamento di default*/
 
     for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
         /*stampo il corpo della mappa*/
@@ -550,9 +534,9 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
 
-	           
+               
               P(mappa->matrice[i][j].mutex);
-              sprintf(strTmp, " %-5d ", mappa->matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].totalNumberOfTaxiPassedHere); /*preparo la stringa da stampare nella cella*/
               V(mappa->matrice[i][j].mutex);
 
 
@@ -623,7 +607,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     ioctl(STDIN_FILENO, TIOCGWINSZ, &size); /*ottengo la dimensione della finestra*/
 
     sops.sem_num = 0; /*Ho un solo semaforo in ogni cella*/
-	sops.sem_flg = 0; /*Comportamento di default*/
+    sops.sem_flg = 0; /*Comportamento di default*/
 
     /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
@@ -632,7 +616,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
-    sprintf(stats[6], "%s%d", " | Taxi with most succesful rides: ", statistiche[5]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
     sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
     sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
     sprintf(stats[9], "%s", " | \033[44m  \033[49m -> Blue shows blocked zones");
@@ -809,18 +793,6 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 }
 
 /*DECIDERE COME FARE CON NICK*/
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId){
-
-    struct msqid_ds msgQueueStats;
-
-    msgctl(msgQueueId, IPC_STAT, &msgQueueStats);
-
-
-    P(mappa->mutex);
-    statistiche[0] = mappa->succesfulRides;
-    statistiche[2] = mappa->AbortedRides;
-    V(mappa->mutex);
-    statistiche[1] = msgQueueStats.msg_qnum;
-    
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght){
 
 }
