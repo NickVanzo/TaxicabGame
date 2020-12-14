@@ -157,11 +157,6 @@ struct msgBuf{
 struct grigliaCitta{
     map_cell matrice[SO_HEIGHT][SO_WIDTH];
     int aspettaTutti;
-
-    int mutex; /*semaforo per modificare le variabili qua sotto*/
-    int succesfoulRides;
-    int AbortedRides;
-
 };
 
 #ifndef DEFINE_CUSTOM_FUNCTIONS

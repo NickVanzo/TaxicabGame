@@ -93,22 +93,18 @@ int main(int argc, char * argv[]){
     	spawnTaxi(mappa, &posizione_taxi_x, &posizione_taxi_y, taxiSemaphore_id, queue_id);
 
 
-    	
+    	fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
     	closestSource(mappa, posizione_taxi_x, posizione_taxi_y, &posizione_taxi_x_finale, &posizione_taxi_y_finale);
 
-    	
+    	fprintf(stderr, "La source più vicina è: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);
     	move(mappa, &posizione_taxi_x, &posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 
-    	
+    	fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
     	getRide(queue_id, enumSoSources(mappa, posizione_taxi_x, posizione_taxi_y));
     
-    	
+    	fprintf(stderr, "Devo andare verso: [%d][%d]\n", myMessage.xDest, myMessage.yDest);
     	move(mappa, &posizione_taxi_x, &posizione_taxi_y, myMessage.xDest, myMessage.yDest);
-        /*aggiorno la quantita di corse con successo*/
-        P(mappa->mutex);
-        mappa->succesfoulRides++;
-        V(mappa->mutex);
-   		
+   		fprintf(stderr, "Sono arrivato a destinazione: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
 
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     	shmdt(mappa);
@@ -421,8 +417,6 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
         if(posizione_taxi_x != posizione_taxi_x_finale || posizione_taxi_y != posizione_taxi_y_finale) {
             move(mappa, posizioneY, posizioneY, posizione_taxi_x_finale, posizione_taxi_y_finale);
         }
-
-       
 
      
 }
