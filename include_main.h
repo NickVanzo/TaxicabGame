@@ -74,6 +74,11 @@
     #include <sys/msg.h>
 #endif
 
+#ifndef INCLUDE_MATH
+    #define INCLUDE_MATH
+    #include <math.h>
+#endif
+
 #ifndef DEFINES
     #define DEFINES
 

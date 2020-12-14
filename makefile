@@ -10,7 +10,7 @@ source: source.o
 	$(CC) source.o -o source
 
 taxi: taxi.o utils.c	
-	$(CC) taxi.o utils.o -o taxi
+	$(CC) taxi.o utils.o -o taxi -lm
 
 source.o: source.c
 	$(CC) -c source.c -o source.o

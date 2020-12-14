@@ -12,12 +12,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
     funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. imposta destX e desY con le coordinate della source più vicina
 */
 
-
-void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY);
-int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
-int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
-int closestMoveRight(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
-int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY);
+void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR, int *destC);
 
 
 
@@ -36,7 +31,7 @@ int SO_TIMEOUT;
 int main(int argc, char * argv[]){
 	  	int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
 		struct grigliaCitta *mappa; /*mappa della citta*/
-
+        int tempx, tempy;
 		int so_taxi = atoi(argv[2]); /*recupero il numero di taxi nella simulazione*/
 		int queue_key, queue_id; /*Variabili per la coda di messaggi*/
 		int taxiSemaphore_id;
@@ -79,6 +74,10 @@ int main(int argc, char * argv[]){
         	exit(EXIT_FAILURE);
     	}
 
+        printf("CIAOOOOOOOOOOOOOOOOOOO\n\n\n\n\n\n");
+        closestSource(mappa, 0, 0, &tempx, &tempy);
+        printf("closest source from 0-0 is: %d, %d\n", tempx, tempy);
+
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
 		srand(getpid());
@@ -86,6 +85,7 @@ int main(int argc, char * argv[]){
     	/*fprintf(stderr, "Posizione prima dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
     	spawnTaxi(mappa, posizione_taxi_x, posizione_taxi_y, taxiSemaphore_id);
 
+        
 
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
 		/*CONTINUA*/
@@ -395,97 +395,111 @@ void signalHandler(int signalNo){
 
 
 
-void closestSource(struct grigliaCitta *mappa, int taxiX, int taxiY, int *destX, int *destY){
-    int tempX = taxiX, tempY= taxiY;
-    int rangeX = 3, rangeY = 3;
-    int sourceFound = 0;
-    while(sourceFound == 0){
+void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR, int *destC){
+    /*
+        idea: scorro la matrice in 4 sensi diversi e ottengo 4 coordinate e poi mi prendo i punti più vicini di quei quattro. lo faccio in un unico metodo
 
-        tempX = taxiX - ((rangeX-1)/2); /*mi sposto come punto di inzio della ricerca nella cella in alto a sx nella diagonale*/
-        tempY = taxiY - ((rangeY -1)/2);
+    */
+   int i=0, j=0;
+   int possibleRcoordinates[4];
+   int possibleCcoordinates[4];
+   int xTemp,yTemp;
+   int countR = 0;
+   int countC = 0;
+   int minDistance = INT_MAX;
+   int positionOfMinDistance = 0, tmp;
 
-        sourceFound = closestMoveUpper(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
+   boolean exitLoop = FALSE;
 
-        if(sourceFound == 0)  sourceFound = closestMoveRight(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
-        
-        if(sourceFound == 0)  sourceFound = closestMoveLower(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
-
-        if(sourceFound == 0)  sourceFound = closestMoveLeft(mappa, destX, destY, rangeX, rangeY, &tempX, &tempY);
-
-
-        /*incremento il range su cui devo controllare los corrimento*/
-        rangeX += 2;
-        rangeY += 2;
+    /*scorro da alto a basso, da sx a dx*/
+    for(i=taxiR; !exitLoop && (countR < SO_HEIGHT); i++){
+        countC=0;
+        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j++ ){
+            if(mappa->matrice[i][j].cellType == SOURCE){
+                exitLoop = TRUE;
+                possibleRcoordinates[0] = i;
+                possibleCcoordinates[0] = j;
+            }
+            countC++;
+            if(j==(SO_WIDTH-1)) j = 0;
+        }
+        countR++;
+        if(i==(SO_HEIGHT - 1)) i = 0;
     }
 
-}
-
-int closestMoveUpper(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
-    int i = 0;
-    *tempX ++;/*mi sposto di una cella a destra di quella in diagonale per potere mantenere uniforme il codice*/
-        for(i=0;i<rangeX-1;i++){ /*scorro la linea superiore*/    
-           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){ /*vado a controllare la matrice solamente se mi trovo dentro l'intervallo delle dimensioni della mappa*/
-               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
-                    *destX = *tempX;
-                    *destY = *tempY;
-                    return 1;
-                }
-           }
-           *tempX++; /*mi sposto a destra*/
+    exitLoop = FALSE;
+    countR = 0;
+    countC = 0;
+    /*scorro da alto a basso, da dx a sx*/
+    for(i=taxiR; !exitLoop && (countR < SO_HEIGHT); i++){
+        countC = 0;
+        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j--){
+            if(mappa->matrice[i][j].cellType == SOURCE){
+                exitLoop = TRUE;
+                possibleRcoordinates[1] = i;
+                possibleCcoordinates[1] = j;
+            }
+            countC++;
+            if(j==0) j = SO_WIDTH-1;
         }
-        return 0;
-}
+        countR++;
+        if(i==(SO_HEIGHT - 1)) i = 0;
+    }
 
-
-int closestMoveLower(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
-    int i = 0;
-     *tempY++; /*ho già controllato che la cella non sia una source. mi sopsto sotto di uno*/
-        
-        for(i=0;i<rangeY-1;i++){ /*controllo la linea a destra*/
-            if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
-               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
-                    *destX = *tempX;
-                    *destY = *tempY;
-                    return 1;
-                }
-           }
-           *tempY++;/*mi sposto di sotto*/
+      /*
+        ora come sopra ma scorro prima le colonne e poi le righe
+    */
+    exitLoop = FALSE;
+    countR = 0;
+    countC = 0;
+   /*scorro da alto a basso, da sx a dx*/
+    for(i=taxiC; !exitLoop && (countC < SO_WIDTH); i++){
+        for(j=taxiR; !exitLoop && (countR < SO_HEIGHT); j++){
+            if(mappa->matrice[j][i].cellType == SOURCE){
+                exitLoop = TRUE;
+                possibleRcoordinates[2] = j;
+                possibleCcoordinates[2] = i;
+            }
+            countR++;
+            if(j==(SO_HEIGHT-1)) j = 0;
         }
-        return 0;
-}
+        countC++;
+        if(i==(SO_WIDTH - 1)) i = 0;
+    }
 
 
-int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
-    int i = 0;
-     *tempX --; /*mi sposto indietro di uno*/
-
-        for(i=0;i<rangeX-1;i++){ /*scorro la linea inferiore*/    
-           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
-               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
-                    *destX = *tempX;
-                    *destY = *tempY;
-                    return 1;
-                }
-           }
-           *tempX--; /*mi sposto a destra*/
+    exitLoop = FALSE;
+    countR = 0;
+    countC = 0;
+   /*scorro da alto a basso, da sx a dx*/
+    for(i=taxiC; !exitLoop && (countC < SO_WIDTH); i++){
+        for(j=taxiR; !exitLoop && (countR < SO_HEIGHT); j--){
+            if(mappa->matrice[j][i].cellType == SOURCE){
+                exitLoop = TRUE;
+                possibleRcoordinates[3] = j;
+                possibleCcoordinates[3] = i;
+            }
+            countR++;
+            if(j==0) j = SO_HEIGHT-1;
         }
-        return 0;
-}
+        countC++;
+        if(i==(SO_WIDTH - 1)) i = 0;
+    }
+    
+    
+  
 
-
-int closestMoveRight(struct grigliaCitta *mappa, int *destX, int *destY, int rangeX, int rangeY, int *tempX, int *tempY){
-    int i = 0;
-      *tempY--; /*mi sposto di una cella in sopra*/
-
-        for(i=0;i<rangeY-1;i++){ /*scorro la linea a sinistra*/    
-           if(*tempX>=0 && *tempY>=0 && *tempY<SO_HEIGHT && *tempY < SO_WIDTH){
-               if(mappa->matrice[*tempX][*tempY].cellType == SOURCE){
-                    *destX = *tempX;
-                    *destY = *tempY;
-                    return 1;
-                }
-           }
-           *tempY--; /*mi sposto a destra*/
+    for(i=0;i<4;i++){
+        tmp = (int) sqrt(pow(taxiR-possibleRcoordinates[i], 2) + pow(taxiC - possibleCcoordinates[i], 2));
+        printf("Close find: %d-%d\n", possibleRcoordinates[i], possibleCcoordinates[i]);
+        if(tmp < minDistance){
+            minDistance = tmp;
+            positionOfMinDistance = i;
         }
-        return 0;
+    }
+
+    *destR = possibleRcoordinates[positionOfMinDistance];
+    *destC = possibleCcoordinates[positionOfMinDistance];
+
+
 }
