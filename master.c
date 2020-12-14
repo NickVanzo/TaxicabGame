@@ -78,8 +78,6 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 
 boolean exitFromProgram;
 
-
-
 /*
     funzione per gestire eventuali segnali guinti al processo
 */
@@ -132,7 +130,7 @@ int main(int argc, char * argv[]) {
 
     /*INIZIALIZZO I DATI DELLE STATISTICHE DELLA MAPPA*/
     mappa->AbortedRides=0;
-    mappa->succesfulRides = 0;
+    mappa->succesfoulRides = 0;
     mappa->mutex = semget(rand(), 1, IPC_CREAT | IPC_EXCL | 0666); /*ottengo un semaforo per la modifica e la lettura dei dati*/
     semctl(mappa -> mutex, 0, SETVAL,1);
 
@@ -257,7 +255,7 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    
+    shmdt(mappa);
 
    
 
@@ -273,12 +271,9 @@ int main(int argc, char * argv[]) {
    }
 
 
-    /*dealloco le risorse create nel programma*/
     free(childSourceCreated);
     free(taxiCreated);
     semctl(taxiSemaphore_id, 0, IPC_RMID);
-    semctl(mappa->mutex, 0, IPC_RMID);
-    shmdt(mappa);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
 
@@ -309,6 +304,10 @@ void spawnBlocks(struct grigliaCitta * mappa, int SO_HOLES) {
             /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
             mappa -> matrice[k][q].cellType = BLOCK;
             mappa -> matrice[k][q].availableForHoles = 0;
+
+            #ifdef DEBUG_BLOCK
+            fprintf(stdout, "%d - Posizionato buco in posizione %d%d\n", numeroBuchi, k, q);
+            #endif
             /*La cella su cui posiziono il buco non potra' contenere altri buchi e nemmeno le 8 celle che ha intorno potranno*/
 
             /*marco come inutilizzabili per contenere buchi le celle intorno alla cella su cui ho posizionato il buco*/
@@ -521,7 +520,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
-    sprintf(stats[6], "%s%d", " | Taxi with most succesful rides: ", statistiche[5]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
     sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
     sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
     sprintf(stats[9], "%s", " | \033[40m  \033[49m -> Black shows blocked zones");
@@ -552,7 +551,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
 	           
               P(mappa->matrice[i][j].mutex);
-              sprintf(strTmp, " %-5d ", mappa->matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].totalNumberOfTaxiPassedHere); /*preparo la stringa da stampare nella cella*/
               V(mappa->matrice[i][j].mutex);
 
 
@@ -632,7 +631,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
-    sprintf(stats[6], "%s%d", " | Taxi with most succesful rides: ", statistiche[5]);
+    sprintf(stats[6], "%s%d", " | Taxi with most succesfoul rides: ", statistiche[5]);
     sprintf(stats[7], "%s %d seconds..."," | Running time :", runningTime);
     sprintf(stats[8], "%s", " |\033[33m Colours legend: \033[39m");
     sprintf(stats[9], "%s", " | \033[44m  \033[49m -> Blue shows blocked zones");
@@ -817,7 +816,7 @@ void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQu
 
 
     P(mappa->mutex);
-    statistiche[0] = mappa->succesfulRides;
+    statistiche[0] = mappa->succesfoulRides;
     statistiche[2] = mappa->AbortedRides;
     V(mappa->mutex);
     statistiche[1] = msgQueueStats.msg_qnum;

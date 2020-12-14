@@ -159,7 +159,7 @@ struct grigliaCitta{
     int aspettaTutti;
 
     int mutex; /*semaforo per modificare le variabili qua sotto*/
-    int succesfulRides;
+    int succesfoulRides;
     int AbortedRides;
 
 };
@@ -183,6 +183,6 @@ struct grigliaCitta{
     */
     void P(int semaphore);
     void V(int semaphore);
-    void waitForZero(int semaphore);
+
 
 #endif
