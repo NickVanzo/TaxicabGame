@@ -9,7 +9,8 @@
 void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
 
 /*
-    funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. imposta destX e desY con le coordinate della source più vicina
+    funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. 
+    le coordinate della dest piu vicina sono dentro  destX e desY.
 */
 
 void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR, int *destC);
@@ -73,10 +74,7 @@ int main(int argc, char * argv[]){
         	printf("Error attaching memory segment!\n");
         	exit(EXIT_FAILURE);
     	}
-
-        printf("CIAOOOOOOOOOOOOOOOOOOO\n\n\n\n\n\n");
-        closestSource(mappa, 0, 0, &tempx, &tempy);
-        printf("closest source from 0-0 is: %d, %d\n", tempx, tempy);
+        
 
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
@@ -403,7 +401,6 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
    int i=0, j=0;
    int possibleRcoordinates[4];
    int possibleCcoordinates[4];
-   int xTemp,yTemp;
    int countR = 0;
    int countC = 0;
    int minDistance = INT_MAX;
@@ -414,17 +411,17 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
     /*scorro da alto a basso, da sx a dx*/
     for(i=taxiR; !exitLoop && (countR < SO_HEIGHT); i++){
         countC=0;
-        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j++ ){
+        for(j=taxiC; !exitLoop && (countC < SO_WIDTH); j++){
             if(mappa->matrice[i][j].cellType == SOURCE){
                 exitLoop = TRUE;
                 possibleRcoordinates[0] = i;
                 possibleCcoordinates[0] = j;
             }
             countC++;
-            if(j==(SO_WIDTH-1)) j = 0;
+            if(j==(SO_WIDTH-1)) j = -1; 
         }
         countR++;
-        if(i==(SO_HEIGHT - 1)) i = 0;
+        if(i==(SO_HEIGHT - 1)) i = -1;
     }
 
     exitLoop = FALSE;
@@ -440,10 +437,10 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
                 possibleCcoordinates[1] = j;
             }
             countC++;
-            if(j==0) j = SO_WIDTH-1;
+            if(j==0) j = SO_WIDTH;
         }
         countR++;
-        if(i==(SO_HEIGHT - 1)) i = 0;
+        if(i==(SO_HEIGHT - 1)) i = -1;
     }
 
       /*
@@ -453,18 +450,19 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
     countR = 0;
     countC = 0;
    /*scorro da alto a basso, da sx a dx*/
-    for(i=taxiC; !exitLoop && (countC < SO_WIDTH); i++){
-        for(j=taxiR; !exitLoop && (countR < SO_HEIGHT); j++){
+    for(i=taxiR; !exitLoop && (countC < SO_WIDTH); i++){
+        countR = 0;
+        for(j=taxiC; !exitLoop && (countR < SO_HEIGHT); j++){
             if(mappa->matrice[j][i].cellType == SOURCE){
                 exitLoop = TRUE;
-                possibleRcoordinates[2] = j;
-                possibleCcoordinates[2] = i;
+                possibleRcoordinates[2] = i;
+                possibleCcoordinates[2] = j;
             }
             countR++;
-            if(j==(SO_HEIGHT-1)) j = 0;
+            if(j==(SO_HEIGHT-1)) j = -1;
         }
         countC++;
-        if(i==(SO_WIDTH - 1)) i = 0;
+        if(i==(SO_WIDTH - 1)) i = -1;
     }
 
 
@@ -473,17 +471,18 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
     countC = 0;
    /*scorro da alto a basso, da sx a dx*/
     for(i=taxiC; !exitLoop && (countC < SO_WIDTH); i++){
+        countR = 0;
         for(j=taxiR; !exitLoop && (countR < SO_HEIGHT); j--){
             if(mappa->matrice[j][i].cellType == SOURCE){
                 exitLoop = TRUE;
-                possibleRcoordinates[3] = j;
-                possibleCcoordinates[3] = i;
+                possibleRcoordinates[3] = i;
+                possibleCcoordinates[3] = j;
             }
             countR++;
-            if(j==0) j = SO_HEIGHT-1;
+            if(j==0) j = SO_HEIGHT;
         }
         countC++;
-        if(i==(SO_WIDTH - 1)) i = 0;
+        if(i==(SO_WIDTH - 1)) i = -1;
     }
     
     
@@ -491,7 +490,6 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
 
     for(i=0;i<4;i++){
         tmp = (int) sqrt(pow(taxiR-possibleRcoordinates[i], 2) + pow(taxiC - possibleCcoordinates[i], 2));
-        printf("Close find: %d-%d\n", possibleRcoordinates[i], possibleCcoordinates[i]);
         if(tmp < minDistance){
             minDistance = tmp;
             positionOfMinDistance = i;
