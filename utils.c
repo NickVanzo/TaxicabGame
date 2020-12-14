@@ -125,3 +125,11 @@ void V(int semaphore){
     sops.sem_op = 1;
     semop(semaphore, &sops, 1);
 }
+
+void waitForZero(int semaphore){
+    struct sembuf sops;
+    sops.sem_flg = 0;
+    sops.sem_num = 0;
+    sops.sem_op = 0;
+    semop(semaphore, &sops, 1);
+}

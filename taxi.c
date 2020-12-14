@@ -55,8 +55,10 @@ int main(int argc, char * argv[]){
 		srand(getpid());
 
 		my_time.tv_sec = 0;
-		my_time.tv_nsec =  so_time_min + (rand() % (so_time_max - so_time_min)); 
-		fprintf(stderr, "%ld\n", my_time.tv_nsec);
+        /*risolvo in problema se metto il time max uguale a quello min */
+		if(so_time_max>so_time_min) my_time.tv_nsec =  so_time_min + (rand() % (so_time_max - so_time_min));
+        else  my_time.tv_nsec =  so_time_min;
+		/*fprintf(stderr, "%ld\n", my_time.tv_nsec);*/
         /*gestisco il segnale di allarme per uscire*/
         signal(SIGALRM, signalHandler);
 
@@ -113,7 +115,7 @@ int main(int argc, char * argv[]){
     	move(mappa, &posizione_taxi_x, &posizione_taxi_y, myMessage.xDest, myMessage.yDest);
         /*aggiorno la quantita di corse con successo*/
         P(mappa->mutex);
-        mappa->succesfoulRides++;
+        mappa->succesfulRides++;
         V(mappa->mutex);
    		
 
@@ -154,8 +156,8 @@ void spawnTaxi(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione
 	/*Abbasso di uno il valore del semaforo availableSpace*/
     P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].availableSpace);
 
-	P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex);
     P(taxiSemaphore_id); /*Abbasso il valore di aspettaTutti cosi nel main è 0*/
+	P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex);
 
 	/*Sezione critica*/
 	mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell++;
@@ -163,7 +165,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione
 	/*Uscita sezione critica rilasciando la risorsa*/
 
 	V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex);
-    V(taxiSemaphore_id);
+    waitForZero(taxiSemaphore_id);
 }
 
 void getRide(int msg_id, long so_source) {
@@ -177,7 +179,7 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
         int posizione_taxi_x = *posizioneX;
         int posizione_taxi_y = *posizioneY;
-		fprintf(stderr, "La mia destinazione: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);	
+		/*fprintf(stderr, "La mia destinazione: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);	*/
 		/*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
 		while(posizione_taxi_y > posizione_taxi_y_finale)
 		{
