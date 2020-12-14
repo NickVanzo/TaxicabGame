@@ -1,6 +1,9 @@
 
 #include "include_main.h"
-
+/*
+	getalarm
+	spostamento ogni tot millisecondi	
+*/
 /*
 	Questa funzione spawna una taxi in una posizione casuale della mappa facendo attenzione che la posizione casuale risponda ai seguenti criteri:
 	1 - ci deve essere spazio per ospitare il taxi
@@ -36,6 +39,7 @@ void signalHandler(int signalNo);
 
 /*variabili globali*/
 struct msgBuf myMessage;
+struct  timespec  my_time;
 int SO_TIMEOUT;
 
 int main(int argc, char * argv[]){
@@ -47,8 +51,12 @@ int main(int argc, char * argv[]){
 		int taxiSemaphore_id;
 		int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
 		int posizione_taxi_x_finale, posizione_taxi_y_finale;
+		long so_time_min = atol(argv[3]), so_time_max = atol(argv[4]);
+		srand(getpid());
 
-
+		my_time.tv_sec = 0;
+		my_time.tv_nsec =  so_time_min + (rand() % (so_time_max - so_time_min)); 
+		fprintf(stderr, "%ld\n", my_time.tv_nsec);
         /*gestisco il segnale di allarme per uscire*/
         signal(SIGALRM, signalHandler);
 
@@ -89,7 +97,6 @@ int main(int argc, char * argv[]){
 
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
-		srand(getpid());
     	spawnTaxi(mappa, &posizione_taxi_x, &posizione_taxi_y, taxiSemaphore_id, queue_id);
 
 
@@ -157,7 +164,6 @@ void spawnTaxi(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione
 
 	V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex);
     V(taxiSemaphore_id);
-    
 }
 
 void getRide(int msg_id, long so_source) {
@@ -171,10 +177,11 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
         int posizione_taxi_x = *posizioneX;
         int posizione_taxi_y = *posizioneY;
-
+		fprintf(stderr, "La mia destinazione: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);	
 		/*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
 		while(posizione_taxi_y > posizione_taxi_y_finale)
 		{
+
 			if(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].cellType != BLOCK) {
 				
                 P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
@@ -191,8 +198,6 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
                 V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
                 V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
                 V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
-
-
 			} else {
 				if(posizione_taxi_x > 0) {
 
@@ -233,6 +238,7 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
 				}
 			}
+			nanosleep(&my_time, NULL);
 		}
 
 	/*------------------------------------------------SPOSTAMENTO VERSO IL BASSO-------------------------------------------------------------*/
@@ -293,6 +299,8 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
 			}
 		}
+		nanosleep(&my_time, NULL);
+
 	}
 
 	/*---------------------------------------------------SPOSTAMENTO VERSO L'ALTO-----------------------------------------------------------*/
@@ -353,6 +361,7 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
 			}
 		}
+	nanosleep(&my_time, NULL);
 	}
     /*---------------------------------------------------SPOSTAMENTO VERSO DESTRA-----------------------------------------------------------*/
 
@@ -413,6 +422,7 @@ void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posi
 
 					}
 				}
+		nanosleep(&my_time, NULL);
 		}
 
         *posizioneX = posizione_taxi_x;

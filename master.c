@@ -152,6 +152,9 @@ int main(int argc, char * argv[]) {
     /*preparo i parametri da mandare come argomenti alla execlp*/
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
+    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
+    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
+
     /*creo array contenente i pid dei figli source creati*/
     childSourceCreated = malloc(SO_SOURCES * sizeof(int));
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
@@ -196,7 +199,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, NULL);
+            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
