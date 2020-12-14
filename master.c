@@ -533,7 +533,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
 	           
               P(mappa->matrice[i][j].mutex);
-              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].totalNumberOfTaxiPassedHere); /*preparo la stringa da stampare nella cella*/
               V(mappa->matrice[i][j].mutex);
 
 

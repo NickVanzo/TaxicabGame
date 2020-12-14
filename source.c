@@ -68,8 +68,8 @@ void signalHandler(int signal){
         case SIGALRM:
             myMessage.mtype = (rand()%SO_SOURCE)+1;
             do{
-                myMessage.xDest = rand()%SO_WIDTH;
-                myMessage.yDest = rand()%SO_HEIGHT;
+                myMessage.xDest = rand()%SO_HEIGHT;
+                myMessage.yDest = rand()%SO_WIDTH;
             }while(mappa->matrice[myMessage.xDest][myMessage.yDest].cellType != ROAD);
                 
 

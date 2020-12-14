@@ -6,7 +6,7 @@
 	1 - ci deve essere spazio per ospitare il taxi
 	2 - la cella selezionata deve essere di tipo ROAD
 */
-void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
+void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id, int queue_id);
 
 /*
     funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. 
@@ -15,18 +15,27 @@ void spawnTaxi(struct grigliaCitta *mappa, int x, int y, int taxiSemaphore_id);
 
 void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR, int *destC);
 
+/*
+	inserire commento
+*/
+int enumSoSources(struct grigliaCitta *mappa, int riga, int colonna);
 
+/*
+	Il taxi ottiene la corsa e parte verso la destinazione dalla source in cui si trova
+*/
+void getRide(int msg_id, long tipo_msg);
 
 /*
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
 	Ritorna il punto di arrivo
 */
-void move(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale, int taxiSemaphore_id);
-
-boolean terminateTaxi = FALSE;
+void move(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale);
 
 void signalHandler(int signalNo);
 
+
+/*variabili globali*/
+struct msgBuf myMessage;
 int SO_TIMEOUT;
 
 int main(int argc, char * argv[]){
@@ -79,25 +88,34 @@ int main(int argc, char * argv[]){
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
 		srand(getpid());
-		/*fprintf(stderr, "ASPETTATTUTTI:%d\n", semctl(taxiSemaphore_id, 0, GETVAL));DEBUG*/
-    	/*fprintf(stderr, "Posizione prima dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
-    	spawnTaxi(mappa, posizione_taxi_x, posizione_taxi_y, taxiSemaphore_id);
-
-        
+    	spawnTaxi(mappa, posizione_taxi_x, posizione_taxi_y, taxiSemaphore_id, queue_id);
 
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
-		/*CONTINUA*/
-		/*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 10, 10);*/
     	shmdt(mappa);
     	exit(EXIT_SUCCESS);
 }
 
-void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int taxiSemaphore_id) {
+int enumSoSources(struct grigliaCitta *mappa,int righe, int colonne) {
+	int i, j;
+	int count_source = 0;
+	for(i = 0; i < SO_HEIGHT; i++) {
+		for(j = 0; j < SO_WIDTH; j++) {
+			if(mappa->matrice[i][j].cellType == SOURCE) {
+				count_source++;
+				if(i == righe && j == colonne) {
+				return count_source;
+				}
+			}
+		}
+	}
+	return -1;
+}
+
+void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int taxiSemaphore_id, int queue_id) {
 	/*Dubbio è la chiave o l'id del semafoto? Se è la chiave allora devo cambiare il codice perchè non sto facendo la get, se non è la chiave allora non capisco cosa sia sbagliato*/
 	/*Errore ottenuto: non vengono stampati i numeri di taxi presenti nelle celle durante la simulazione*/
 	int availableSpaceOnCell;
 	int *posizione_taxi_x_finale, *posizione_taxi_y_finale;
-	int i = 0, j = 0;
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o non è una road cambio cella*/
 	do {
 		posizione_taxi_x = rand()%SO_HEIGHT;
@@ -123,15 +141,26 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 
     posizione_taxi_x_finale = malloc(sizeof(int));
     posizione_taxi_y_finale = malloc(sizeof(int));
-
-    *posizione_taxi_x_finale = 15;
-    *posizione_taxi_y_finale = 8;
-
-	move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale, taxiSemaphore_id);
+    fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
+    closestSource(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
+    
+    move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
+    fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
+    getRide(queue_id, enumSoSources(mappa, posizione_taxi_x, posizione_taxi_y));
+    
+    fprintf(stderr, "Devo andare verso: [%d][%d]\n", myMessage.xDest, myMessage.yDest);
+    move(mappa, posizione_taxi_x, posizione_taxi_y, &myMessage.xDest, &myMessage.yDest);
+    fprintf(stderr, "Sono arrivato a destinazione: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
 }
 
+void getRide(int msg_id, long so_source) {
+	if(msgrcv(msg_id, &myMessage, 2*sizeof(int), so_source, 0) == -1) {
+		fprintf(stderr, "Errore codice: %d (%s)", errno, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+}
 
-void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale, int taxiSemaphore_id) {
+void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale) {
 		/*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
 		while(posizione_taxi_y > *posizione_taxi_y_finale)
 		{
@@ -376,9 +405,9 @@ void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y
 		}
 			/*se lo spostamento non è completo, riavvio lo spostamento in maniera ricorsiva*/
 			if(posizione_taxi_x != *posizione_taxi_x_finale || posizione_taxi_y != *posizione_taxi_y_finale) {
-				move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale , taxiSemaphore_id);
+				move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 			}
-	}
+}
 
 
 
@@ -399,11 +428,14 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
    int minDistance = INT_MAX;
    int positionOfMinDistance = 0, tmp;
 
-   if(mappa->matrice[taxiR][taxiC].cellTypeù == SOURCE) return;
-
+   if(mappa->matrice[taxiR][taxiC].cellType == SOURCE) {
+   		*destR = taxiR;
+        *destC = taxiC;
+        return;
+   }
     for(i=0;i<SO_HEIGHT;i++){
         for(j=0;j<SO_WIDTH;j++){
-            if(mappa->matrice[i][j].cellType == SOURCE && i!=taxiR && j!=taxiC){
+            if(mappa->matrice[i][j].cellType == SOURCE){
                 tmp = (int) sqrt(pow(taxiR-i, 2) + pow(taxiC - j, 2));
                 if(tmp < minDistance){
                     minDistance = tmp;
@@ -413,8 +445,5 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
             }
         }
     }
-
-    
-
-
 }
+
