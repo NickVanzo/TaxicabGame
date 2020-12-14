@@ -29,7 +29,7 @@ void getRide(int msg_id, long tipo_msg);
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
 	Ritorna il punto di arrivo
 */
-void move(struct grigliaCitta *mappa, int *posizione_taxi_x_iniziale, int *posizione_taxi_y_iniziale, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale);
+void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posizione_taxi_x_finale, int posizione_taxi_y_finale);
 
 void signalHandler(int signalNo);
 
@@ -46,9 +46,10 @@ int main(int argc, char * argv[]){
 		int queue_key, queue_id; /*Variabili per la coda di messaggi*/
 		int taxiSemaphore_id;
 		int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
-		int *posizione_taxi_x_finale, *posizione_taxi_y_finale;
+		int posizione_taxi_x_finale, posizione_taxi_y_finale;
 		posizione_taxi_x = malloc(sizeof(int));
 		posizione_taxi_y = malloc(sizeof(int));
+
 
         /*gestisco il segnale di allarme per uscire*/
         signal(SIGALRM, signalHandler);
@@ -87,25 +88,24 @@ int main(int argc, char * argv[]){
         	exit(EXIT_FAILURE);
     	}
         
-    	posizione_taxi_x_finale = malloc(sizeof(int));
-    	posizione_taxi_y_finale = malloc(sizeof(int));
 
  	  	shmKey_ForTaxi = ftok("ipcKey.key", 3);
     	taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
 		srand(getpid());
     	spawnTaxi(mappa, posizione_taxi_x, posizione_taxi_y, taxiSemaphore_id, queue_id);
 
-    	fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
-    	closestSource(mappa, *posizione_taxi_x, *posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 
-    	fprintf(stderr, "La source più vicina è: [%d][%d]", *posizione_taxi_x_finale, *posizione_taxi_y_finale);
+    	fprintf(stderr, "Sono spawnato in posizione [%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
+    	closestSource(mappa, *posizione_taxi_x, *posizione_taxi_y, &posizione_taxi_x_finale, &posizione_taxi_y_finale);
+
+    	fprintf(stderr, "La source più vicina è: [%d][%d]", posizione_taxi_x_finale, posizione_taxi_y_finale);
     	move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 
     	fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
     	getRide(queue_id, enumSoSources(mappa, posizione_taxi_x, posizione_taxi_y));
     
     	fprintf(stderr, "Devo andare verso: [%d][%d]\n", myMessage.xDest, myMessage.yDest);
-    	move(mappa, posizione_taxi_x, posizione_taxi_y, &myMessage.xDest, &myMessage.yDest);
+    	move(mappa, posizione_taxi_x, posizione_taxi_y, myMessage.xDest, myMessage.yDest);
    		fprintf(stderr, "Sono arrivato a destinazione: [%d][%d]\n", *posizione_taxi_x, *posizione_taxi_y);
 
     	/*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
@@ -133,7 +133,6 @@ void spawnTaxi(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione
 	/*Dubbio è la chiave o l'id del semafoto? Se è la chiave allora devo cambiare il codice perchè non sto facendo la get, se non è la chiave allora non capisco cosa sia sbagliato*/
 	/*Errore ottenuto: non vengono stampati i numeri di taxi presenti nelle celle durante la simulazione*/
 	int availableSpaceOnCell;
-
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o non è una road cambio cella*/
 	do {
 		*posizione_taxi_x = rand()%SO_HEIGHT;
@@ -166,253 +165,262 @@ void getRide(int msg_id, long so_source) {
 	}
 }
 
-void move(struct grigliaCitta *mappa, int *posizione_taxi_x, int *posizione_taxi_y, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale) {
+void move(struct grigliaCitta *mappa, int *posizioneX, int *posizioneY, int posizione_taxi_x_finale, int posizione_taxi_y_finale) {
+
+        int posizione_taxi_x = *posizioneX;
+        int posizione_taxi_y = *posizioneY;
+
 		/*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
-		while(*posizione_taxi_y > *posizione_taxi_y_finale)
+		while(posizione_taxi_y > posizione_taxi_y_finale)
 		{
-			if(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].cellType != BLOCK) {
+			if(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].cellType != BLOCK) {
 				
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
                 /*SEZIONE CRITICA*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
                 posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
                 /*ESCO DALLA SEZIONE CRITICA*/
 
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 
 			} else {
-				if(*posizione_taxi_x > 0) {
+				if(posizione_taxi_x > 0) {
 
-                    P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-                    P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
-                    P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                    P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+                    P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+                    P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
 
                     /*SEZIONE CRITICA*/
-                    mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                    mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                    mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+                    mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                    mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                    mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
                     posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 
                     /*ESCO DALLA SEZIONE CRITICA*/
-                    V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-                    V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-                    V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                    V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+                    V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                    V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 
 				} else {
 
-                    P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-                    P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-                    P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+                    P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+                    P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                    P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
 
 
                     /*SEZIONE CRITICA*/
-                    mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                    mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                    mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
-                    *posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+                    mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                    mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                    mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+                    posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
                     /*ESCO DALLA SEZIONE CRITICA*/
 
-                    V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-                    V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-                    V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                    V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+                    V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                    V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
 
 				}
 			}
 		}
 
 	/*------------------------------------------------SPOSTAMENTO VERSO IL BASSO-------------------------------------------------------------*/
-	while(*posizione_taxi_x < *posizione_taxi_x_finale)
+	while(posizione_taxi_x < posizione_taxi_x_finale)
 	{
-		if(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].cellType != BLOCK) {
+		if(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].cellType != BLOCK) {
 			
-            P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-            P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-            P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+            P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+            P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+            P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
 
 
             /*SEZIONE CRITICA*/
-            mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-            mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-            mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
-            *posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+            mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+            mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+            mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+            posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
             /*ESCO DALLA SEZIONE CRITICA*/
 
-            V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-            V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-            V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+            V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+            V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+            V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
 
 		} else {
-			if(*posizione_taxi_y > 0) {
+			if(posizione_taxi_y > 0) {
 		
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
                 /*SEZIONE CRITICA*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
-                *posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
+                posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
                 /*ESCO DALLA SEZIONE CRITICA*/
 
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 			} else {
 
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
                 /*SEZIONE CRITICA*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--;
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].taxiOnThisCell++;
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
-                *posizione_taxi_y++;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].taxiOnThisCell++;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
+                posizione_taxi_y++;
                 /*ESCO DALLA SEZIONE CRITICA*/
 
                 
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 			}
 		}
 	}
 
 	/*---------------------------------------------------SPOSTAMENTO VERSO L'ALTO-----------------------------------------------------------*/
-	while(*posizione_taxi_x > *posizione_taxi_x_finale)
+	while(posizione_taxi_x > posizione_taxi_x_finale)
 	{
-		if(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].cellType != BLOCK) {
+		if(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].cellType != BLOCK) {
 		
-            P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-            P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
-            P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+            P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+            P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+            P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
 
             /*SEZIONE CRITICA*/
-            mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-            mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-            mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
-            *posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+            mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+            mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+            mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+            posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 
             /*ESCO DALLA SEZIONE CRITICA*/
-            V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-            V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-            V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+            V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+            V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+            V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 		} else {
-			if(*posizione_taxi_y > 0) {
+			if(posizione_taxi_y > 0) {
 
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Ottengo il mutex dove vado*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
                 /*SEZIONE CRITICA*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
-                *posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].totalNumberOfTaxiPassedHere++;
+                posizione_taxi_y--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
                 /*ESCO DALLA SEZIONE CRITICA*/
 
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*Rilascio il mutex vecchio*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 			} else {
 				
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-                P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
 
                 /*SEZIONE CRITICA*/
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--;
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].taxiOnThisCell++;
-                mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
-                *posizione_taxi_y++;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].taxiOnThisCell++;
+                mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
+                posizione_taxi_y++;
                 /*ESCO DALLA SEZIONE CRITICA*/
 
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
-                V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
+                V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 			}
 		}
 	}
     /*---------------------------------------------------SPOSTAMENTO VERSO DESTRA-----------------------------------------------------------*/
 
-	while( *posizione_taxi_y < *posizione_taxi_y_finale ) {
-			if(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].cellType != BLOCK) {
+	while( posizione_taxi_y < posizione_taxi_y_finale ) {
+			if(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].cellType != BLOCK) {
 
-                    P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].availableSpace);
-                    P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-                    P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
+                    P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
+                    P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                    P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].mutex); /*prendo il mutex dove vado*/
 
                     /*SEZIONE CRITICA*/
-                    mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--;
-                    mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].taxiOnThisCell++;
-                    mappa->matrice[*posizione_taxi_x][*posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
+                    mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--;
+                    mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].taxiOnThisCell++;
+                    mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].totalNumberOfTaxiPassedHere++;
                     posizione_taxi_y++;
                     /*ESCO DALLA SEZIONE CRITICA*/
 
-                    V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].availableSpace);
-                    V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
-                    V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                    V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].availableSpace);
+                    V(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].mutex); /*Rilascio il mutex vecchio*/
+                    V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 				} else {
-					if(*posizione_taxi_x > 0){
+					if(posizione_taxi_x > 0){
 				
-                        P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-                        P(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
-                        P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                        P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+                        P(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+                        P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
 
 
                         /*SEZIONE CRITICA*/
-                        mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                        mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                        mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
-                        *posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+                        mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                        mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                        mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+                        posizione_taxi_x--; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
 
                         /*ESCO DALLA SEZIONE CRITICA*/
-                        V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-                        V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-                        V(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
+                        V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+                        V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                        V(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Rilascio il mutex nuovo*/
 
 					} else {
 
-                        P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].availableSpace);
-                        P(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
-                        P(mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
+                        P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].availableSpace);
+                        P(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Ottengo il mutex dove sono*/
+                        P(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].mutex); /*Ottengo il mutex dove vado*/
 
 
                         /*SEZIONE CRITICA*/
-                        mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
-                        mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
-                        mappa->matrice[*posizione_taxi_x+1][*posizione_taxi_y].totalNumberOfTaxiPassedHere++;
-                        *posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
+                        mappa->matrice[posizione_taxi_x][posizione_taxi_y].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
+                        mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].taxiOnThisCell++; /*Entrando nella nuova cella aumento il numero di taxi in quella cella*/
+                        mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].totalNumberOfTaxiPassedHere++;
+                        posizione_taxi_x++; /*Lo spostamento avviene quando sono sicuro che il taxi si possa spostare*/
                         /*ESCO DALLA SEZIONE CRITICA*/
 
-                        V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].availableSpace);
-                        V(mappa->matrice[*posizione_taxi_x-1][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
-                        V(mappa->matrice[*posizione_taxi_x][*posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                        V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].availableSpace);
+                        V(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
+                        V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex); /*Rilascio il mutex vecchio*/
 
 					}
 				}
 		}
-			/*se lo spostamento non è completo, riavvio lo spostamento in maniera ricorsiva*/
-			if(*posizione_taxi_x != *posizione_taxi_x_finale || *posizione_taxi_y != *posizione_taxi_y_finale) {
-				move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
-			}
+
+        *posizioneX = posizione_taxi_x;
+        *posizioneY = posizione_taxi_y;
+        /*se lo spostamento non è completo, riavvio lo spostamento in maniera ricorsiva*/
+        if(posizione_taxi_x != posizione_taxi_x_finale || posizione_taxi_y != posizione_taxi_y_finale) {
+            move(mappa, posizioneY, posizioneY, posizione_taxi_x_finale, posizione_taxi_y_finale);
+        }
+
+     
 }
 
 
