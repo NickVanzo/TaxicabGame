@@ -23,14 +23,9 @@ int closestMoveLeft(struct grigliaCitta *mappa, int *destX, int *destY, int rang
 
 /*
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
+	Ritorna il punto di arrivo
 */
-void move(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int posizione_taxi_x_finale, int posizione_taxi_y_finale, int taxiSemaphore_id);
-
-void moveUp();
-void moveDown();
-void moveRight();
-void moveLeft();
-
+void move(struct grigliaCitta *mappa, int posizione_taxi_x_iniziale, int posizione_taxi_y_iniziale, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale, int taxiSemaphore_id);
 
 boolean terminateTaxi = FALSE;
 
@@ -46,16 +41,13 @@ int main(int argc, char * argv[]){
 		int queue_key, queue_id; /*Variabili per la coda di messaggi*/
 		int taxiSemaphore_id;
 		int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
-		/*Apertura coda di messaggi*/
-
-
-
 
         /*gestisco il segnale di allarme per uscire*/
         signal(SIGALRM, signalHandler);
 
         SO_TIMEOUT = atoi(argv[1]); /*recupero la durata della simulazione*/
 
+		/*Apertura coda di messaggi*/
 		queue_key = ftok("ipcKey.key", 1);
 		if(queue_key == -1){
         	printf("Error retriving message queue key!\n");
@@ -106,6 +98,7 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	/*Dubbio è la chiave o l'id del semafoto? Se è la chiave allora devo cambiare il codice perchè non sto facendo la get, se non è la chiave allora non capisco cosa sia sbagliato*/
 	/*Errore ottenuto: non vengono stampati i numeri di taxi presenti nelle celle durante la simulazione*/
 	int availableSpaceOnCell;
+	int *posizione_taxi_x_finale, *posizione_taxi_y_finale;
 	int i = 0, j = 0;
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o non è una road cambio cella*/
 	do {
@@ -130,13 +123,19 @@ void spawnTaxi(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_t
 	V(mappa->matrice[posizione_taxi_x][posizione_taxi_y].mutex);
     V(taxiSemaphore_id);
 
-	move(mappa, posizione_taxi_x, posizione_taxi_y, 15, 8, taxiSemaphore_id);
+    posizione_taxi_x_finale = malloc(sizeof(int));
+    posizione_taxi_y_finale = malloc(sizeof(int));
+
+    *posizione_taxi_x_finale = 15;
+    *posizione_taxi_y_finale = 8;
+
+	move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale, taxiSemaphore_id);
 }
 
 
-void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int posizione_taxi_x_finale, int posizione_taxi_y_finale, int taxiSemaphore_id) {
+void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y, int *posizione_taxi_x_finale, int *posizione_taxi_y_finale, int taxiSemaphore_id) {
 		/*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
-		while(posizione_taxi_y > posizione_taxi_y_finale)
+		while(posizione_taxi_y > *posizione_taxi_y_finale)
 		{
 			if(mappa->matrice[posizione_taxi_x][posizione_taxi_y-1].cellType != BLOCK) {
 				
@@ -199,7 +198,7 @@ void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y
 		}
 
 	/*------------------------------------------------SPOSTAMENTO VERSO IL BASSO-------------------------------------------------------------*/
-	while(posizione_taxi_x < posizione_taxi_x_finale)
+	while(posizione_taxi_x < *posizione_taxi_x_finale)
 	{
 		if(mappa->matrice[posizione_taxi_x+1][posizione_taxi_y].cellType != BLOCK) {
 			
@@ -259,7 +258,7 @@ void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y
 	}
 
 	/*---------------------------------------------------SPOSTAMENTO VERSO L'ALTO-----------------------------------------------------------*/
-	while(posizione_taxi_x > posizione_taxi_x_finale)
+	while(posizione_taxi_x > *posizione_taxi_x_finale)
 	{
 		if(mappa->matrice[posizione_taxi_x-1][posizione_taxi_y].cellType != BLOCK) {
 		
@@ -319,7 +318,7 @@ void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y
 	}
     /*---------------------------------------------------SPOSTAMENTO VERSO DESTRA-----------------------------------------------------------*/
 
-	while( posizione_taxi_y < posizione_taxi_y_finale ) {
+	while( posizione_taxi_y < *posizione_taxi_y_finale ) {
 			if(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].cellType != BLOCK) {
 
                     P(mappa->matrice[posizione_taxi_x][posizione_taxi_y+1].availableSpace);
@@ -378,8 +377,8 @@ void move(struct grigliaCitta *mappa, int posizione_taxi_x, int posizione_taxi_y
 				}
 		}
 			/*se lo spostamento non è completo, riavvio lo spostamento in maniera ricorsiva*/
-			if(posizione_taxi_x != posizione_taxi_x_finale || posizione_taxi_y != posizione_taxi_y_finale) {
-				move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale,posizione_taxi_y_finale , taxiSemaphore_id);
+			if(posizione_taxi_x != *posizione_taxi_x_finale || posizione_taxi_y != *posizione_taxi_y_finale) {
+				move(mappa, posizione_taxi_x, posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale , taxiSemaphore_id);
 			}
 	}
 
