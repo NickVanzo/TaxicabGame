@@ -39,7 +39,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
 /*
     Funzione per aggiornare le statistiche
 */
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght);
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -95,6 +95,7 @@ int main(int argc, char * argv[]) {
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
     int taxiSemaphore_id;
+    int trashKillSignal; /*variabile temporanea usata per attendere la morte dei fligli e svuotare la tabella dei processi*/
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
@@ -126,6 +127,12 @@ int main(int argc, char * argv[]) {
         exit(EXIT_FAILURE);
     }
     /*MEMORIA CONDIVISA CREATA CON SUCCESSO*/
+
+    /*INIZIALIZZO I DATI DELLE STATISTICHE DELLA MAPPA*/
+    mappa->AbortedRides=0;
+    mappa->succesfoulRides = 0;
+    mappa->mutex = semget(rand(), 1, IPC_CREAT | IPC_EXCL | 0666); /*ottengo un semaforo per la modifica e la lettura dei dati*/
+    semctl(mappa -> mutex, 0, SETVAL,1);
 
     /*IMPOSTAZIONE HANDLER SEGNALE TIMER*/
     signal(SIGALRM, signalHandler);
@@ -208,7 +215,7 @@ int main(int argc, char * argv[]) {
 
     while (!exitFromProgram) {
 
-        aggiornaStatistiche(mappa, mapStats, 6);
+        aggiornaStatistiche(mappa, mapStats, queue_id);
 
         if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
           stampaStatisticheAscii(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
@@ -221,7 +228,7 @@ int main(int argc, char * argv[]) {
     }
 
 
-    aggiornaStatistiche(mappa, mapStats, 6);
+    aggiornaStatistiche(mappa, mapStats, queue_id);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
@@ -247,10 +254,18 @@ int main(int argc, char * argv[]) {
 
     shmdt(mappa);
 
-    /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
-    /*for (i = 0; i < SO_SOURCES; i++) {
-        kill(childSourceCreated[i], SIGUSR1);
-    }*/
+   
+
+   /*attendo la morte di tutti i figli*/
+   for(i = 0; i<SO_TAXI; i++){
+       kill(taxiCreated[i], SIGKILL); /*da sostituire con un segnale specifico!!!*/
+       waitpid(taxiCreated[i], &trashKillSignal);
+   }
+
+   for(i=0;i<SO_SOURCES;i++){
+       kill(childSourceCreated[i], SIGKILL);
+       waitpid(childSourceCreated[i], &trashKillSignal);
+   }
 
 
     free(childSourceCreated);
@@ -790,6 +805,18 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 }
 
 /*DECIDERE COME FARE CON NICK*/
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght){
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId){
+
+    struct msqid_ds msgQueueStats;
+
+    msgctl(msgQueueId, IPC_STAT, &msgQueueStats);
+
+
+    P(mappa->mutex);
+    statistiche[0] = mappa->succesfoulRides;
+    statistiche[2] = mappa->AbortedRides;
+    V(mappa->mutex);
+    statistiche[1] = msgQueueStats.msg_qnum;
+    
 
 }
