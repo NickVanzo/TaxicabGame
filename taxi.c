@@ -18,7 +18,7 @@ void closestSource(struct grigliaCitta *mappa, int taxiR, int taxiC, int *destR,
 /*
 	inserire commento
 */
-int enumSoSources(struct grigliaCitta *mappa, int *riga, int *colonna);
+int enumSoSources(struct grigliaCitta *mappa, int riga, int colonna);
 
 /*
 	Il taxi ottiene la corsa e parte verso la destinazione dalla source in cui si trova
@@ -100,7 +100,7 @@ int main(int argc, char * argv[]){
     	move(mappa, &posizione_taxi_x, &posizione_taxi_y, posizione_taxi_x_finale, posizione_taxi_y_finale);
 
     	fprintf(stderr, "Sono arrivato alla source + vicina[%d][%d]\n", posizione_taxi_x, posizione_taxi_y);
-    	getRide(queue_id, enumSoSources(mappa, &posizione_taxi_x, &posizione_taxi_y));
+    	getRide(queue_id, enumSoSources(mappa, posizione_taxi_x, posizione_taxi_y));
     
     	fprintf(stderr, "Devo andare verso: [%d][%d]\n", myMessage.xDest, myMessage.yDest);
     	move(mappa, &posizione_taxi_x, &posizione_taxi_y, myMessage.xDest, myMessage.yDest);
@@ -111,14 +111,14 @@ int main(int argc, char * argv[]){
     	exit(EXIT_SUCCESS);
 }
 
-int enumSoSources(struct grigliaCitta *mappa,int *righe, int *colonne) {
+int enumSoSources(struct grigliaCitta *mappa,int righe, int colonne) {
 	int i, j;
 	int count_source = 0;
 	for(i = 0; i < SO_HEIGHT; i++) {
 		for(j = 0; j < SO_WIDTH; j++) {
 			if(mappa->matrice[i][j].cellType == SOURCE) {
 				count_source++;
-				if(i == *righe && j == *colonne) {
+				if(i == righe && j == colonne) {
 				return count_source;
 				}
 			}
