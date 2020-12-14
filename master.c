@@ -95,6 +95,7 @@ int main(int argc, char * argv[]) {
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
     int runningTime = 0;
     int taxiSemaphore_id;
+    int trashKillSignal; /*variabile per raccogliere stato segnale uscita*/
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
@@ -245,16 +246,27 @@ int main(int argc, char * argv[]) {
         }
     }
 
-    shmdt(mappa);
 
     /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
     /*for (i = 0; i < SO_SOURCES; i++) {
         kill(childSourceCreated[i], SIGUSR1);
     }*/
 
+      /*attendo la morte di tutti i figli*/
+   for(i = 0; i<SO_TAXI; i++){
+       kill(taxiCreated[i], SIGKILL); /*da sostituire con un segnale specifico!!!*/
+       waitpid(taxiCreated[i], &trashKillSignal);
+   }
+
+   for(i=0;i<SO_SOURCES;i++){
+       kill(childSourceCreated[i], SIGKILL);
+       waitpid(childSourceCreated[i], &trashKillSignal);
+   }
+
 
     free(childSourceCreated);
     free(taxiCreated);
+    shmdt(mappa);
     semctl(taxiSemaphore_id, 0, IPC_RMID);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
