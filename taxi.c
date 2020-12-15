@@ -15,6 +15,14 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id);
 void closestSource(struct grigliaCitta * mappa);
 
 /*
+    questa funzione permette di ottenere il tipo di messaggio su cui mettersi in ascolto, data la posizione del taxi
+    il tipo di messaggio corrsiponde al numero in cui compare la SO_SOURCE con una letttura sequenziale della mappa
+    ovvero per esempio se ho una so source in 0,0 e una in 0,3 , la prima avrà mtype = 1  e la seconda avrà mtype=2 e così via...
+    la funzione ritorna -1 in caso di errore
+*/
+int enumSoSources(struct grigliaCitta *mappa);
+
+/*
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
 	Ritorna il punto di arrivo
 */
@@ -92,6 +100,7 @@ int main(int argc, char * argv[]) {
     spawnTaxi(mappa, taxiSemaphore_id);
     closestSource(mappa);
     move(mappa, taxiSemaphore_id);
+    
     /*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     /*CONTINUA*/
     /*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 10, 10);*/
@@ -293,5 +302,18 @@ void closestSource(struct grigliaCitta * mappa) {
             }
         }
     }
+}
 
+int enumSoSources(struct grigliaCitta *mappa) {
+	int i, j;
+	int count_source = 0;
+	for(i = 0; i < SO_HEIGHT; i++) {
+		for(j = 0; j < SO_WIDTH; j++) {
+			if(mappa->matrice[i][j].cellType == SOURCE) {
+				count_source++;
+				if(i == posizioneTaxi.posR && j == posizioneTaxi.posC) return count_source;
+			}
+		}
+	}
+	return -1;
 }
