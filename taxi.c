@@ -26,11 +26,17 @@ int enumSoSources(struct grigliaCitta *mappa);
 	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
 	Ritorna il punto di arrivo
 */
-void move(struct grigliaCitta * mappa, int taxiSemaphore_id);
+void move(struct grigliaCitta * mappa);
 void moveUp(struct grigliaCitta * mappa);
 void moveDown(struct grigliaCitta * mappa);
 void moveLeft(struct grigliaCitta * mappa);
 void moveRight(struct grigliaCitta * mappa);
+
+
+/*
+    questa funzione permette di prelevare un messaggio, dato un taxi presente in una so_source...
+*/
+void getRide(int msg_queue_id, long so_source);
 
 boolean terminateTaxi = FALSE;
 
@@ -99,8 +105,12 @@ int main(int argc, char * argv[]) {
     /*fprintf(stderr, "Posizione prima dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
     spawnTaxi(mappa, taxiSemaphore_id);
     closestSource(mappa);
-    move(mappa, taxiSemaphore_id);
+    move(mappa);
     
+    getRide(queue_id, (long)enumSoSources(mappa));
+    
+    move(mappa);
+
     /*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     /*CONTINUA*/
     /*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 10, 10);*/
@@ -138,7 +148,7 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id) {
 
 
 
-void move(struct grigliaCitta * mappa, int taxiSemaphore_id) {
+void move(struct grigliaCitta * mappa) {
     /*----------------------------------------------SPOSTAMENTO VERSO SINISTRA---------------------------------------------------------*/
     while (posizioneTaxi.posC > posizioneTaxi.destC) {
         if (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].cellType != BLOCK) {
@@ -189,7 +199,7 @@ void move(struct grigliaCitta * mappa, int taxiSemaphore_id) {
     }
     /*se lo spostamento non è completo, riavvio lo spostamento in maniera ricorsiva*/
     if (posizioneTaxi.posR != posizioneTaxi.destR || posizioneTaxi.posC != posizioneTaxi.destC) {
-        move(mappa, taxiSemaphore_id);
+        move(mappa);
     } else {
         posizioneTaxi.posR = posizioneTaxi.destR;
         posizioneTaxi.posC = posizioneTaxi.destC;
@@ -216,7 +226,6 @@ void moveUp(struct grigliaCitta * mappa) {
 }
 
 
-
 void moveDown(struct grigliaCitta * mappa) {
     P(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
@@ -233,7 +242,6 @@ void moveDown(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
 }
-
 
 
 void moveLeft(struct grigliaCitta * mappa) {
@@ -316,4 +324,14 @@ int enumSoSources(struct grigliaCitta *mappa) {
 		}
 	}
 	return -1;
+}
+
+void getRide(int msg_queue_id, long so_source){
+    struct msgBuf myMessage;
+	if(msgrcv(msg_queue_id, &myMessage, 2*sizeof(int), so_source, 0) == -1) {
+		fprintf(stderr, "Errore codice: %d (%s)\nsono in getRide()", errno, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+    posizioneTaxi.destR = myMessage.xDest;
+    posizioneTaxi.destC = myMessage.yDest;
 }
