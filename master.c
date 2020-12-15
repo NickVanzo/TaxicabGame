@@ -39,7 +39,7 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
 /*
     Funzione per aggiornare le statistiche
 */
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght);
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId);
 
 /*
     funzione per inizializzare la simulazione e tenere il codice del main meno sporco possibile
@@ -209,7 +209,7 @@ int main(int argc, char * argv[]) {
 
     while (!exitFromProgram) {
 
-        aggiornaStatistiche(mappa, mapStats, 6);
+        aggiornaStatistiche(mappa, mapStats, queue_id);
 
         if(printWithAscii){ /*se ho lo schermo piccolo stampo con ascii*/
           stampaStatisticheAscii(mappa, mapStats, FALSE, SO_TOP_CELLS, runningTime);
@@ -222,7 +222,7 @@ int main(int argc, char * argv[]) {
     }
 
 
-    aggiornaStatistiche(mappa, mapStats, 6);
+    aggiornaStatistiche(mappa, mapStats, queue_id);
     /*RICORDARSI CHE QUA TUTTI ITAKI SONO DA KILLARE*/
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
@@ -247,12 +247,8 @@ int main(int argc, char * argv[]) {
     }
 
 
-    /*Faccio terminare tutti i processi sources facendo anche smettere l'invio dei segnali*/
-    /*for (i = 0; i < SO_SOURCES; i++) {
-        kill(childSourceCreated[i], SIGUSR1);
-    }*/
 
-      /*attendo la morte di tutti i figli*/
+   /*attendo la morte di tutti i figli*/
    for(i = 0; i<SO_TAXI; i++){
        kill(taxiCreated[i], SIGKILL); /*da sostituire con un segnale specifico!!!*/
        waitpid(taxiCreated[i], &trashKillSignal);
@@ -509,8 +505,11 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
-    sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
-    sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
+    sprintf(stats[1], "%s%d", " | Number of successful rides: ", statistiche[0]);
+
+    if(!finalPrint)sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]);
+    else sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
+
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
@@ -620,8 +619,11 @@ void stampaStatisticheAscii(struct grigliaCitta * mappa, int * statistiche, bool
 
     /*creo le stringhe da stampare*/
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
-    sprintf(stats[1], "%s%d", " | Number of successfoul rides: ", statistiche[0]);
-    sprintf(stats[2], "%s%d", " | Number of unsuccessfoul rides: ", statistiche[1]);
+    sprintf(stats[1], "%s%d", " | Number of successful rides: ", statistiche[0]);
+
+    if(!finalPrint)sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]);
+    else sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
+
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
     sprintf(stats[5], "%s%d", " | Cumulative farthest driving taxi: ", statistiche[4]);
@@ -802,6 +804,9 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 }
 
 /*DECIDERE COME FARE CON NICK*/
-void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int statisticheLenght){
+void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQueueId){
+    struct msqid_ds buffer;
+    msgctl(msgQueueId, IPC_STAT, &buffer);
+    statistiche[1] = buffer.msg_qnum;
 
 }
