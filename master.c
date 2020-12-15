@@ -796,14 +796,6 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 
         }
     }
-
-    for(i = 0; i < SO_HEIGHT; i++) {
-    	for(j = 0; j < SO_WIDTH; j++) {
-    		if(mappa->matrice[i][j].cellType != BLOCK) {
-    			mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN + rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN);
-    		}
-    	}
-    }
 }
 
 /*DECIDERE COME FARE CON NICK*/
