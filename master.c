@@ -146,6 +146,7 @@ int main(int argc, char * argv[]) {
     /*preparo i parametri da mandare come argomenti alla execlp*/
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES);
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
+    sprintf(SO_TIMEOUT_PARAM, "%d", SO_TIMEOUT);
     /*creo array contenente i pid dei figli source creati*/
     childSourceCreated = malloc(SO_SOURCES * sizeof(int));
     /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
@@ -158,7 +159,7 @@ int main(int argc, char * argv[]) {
             break;
         case 0:
             /*cambio il programma in esecuzione*/
-            execlp("./source", "source", SO_SOURCES_PARAM, SO_DURATION_PARAM, NULL);
+            execlp("./source", "source", SO_SOURCES_PARAM, SO_DURATION_PARAM, SO_TIMEOUT_PARAM, NULL);
             printf("Error loading new program %s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
@@ -174,11 +175,7 @@ int main(int argc, char * argv[]) {
     shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
     semctl(taxiSemaphore_id, 0, SETVAL, SO_TAXI);
-    TEST_ERROR;
 
- 
-    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
-    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
     /*Creao un array contenente i pid dei figli taxi creati*/
     taxiCreated = malloc(SO_TAXI * sizeof(int));
     for(i = 0; i < SO_TAXI; i++) {
@@ -189,7 +186,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("./taxi","taxi", SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, NULL);
+            execlp("./taxi","taxi", SO_TIMEOUT_PARAM, NULL);
             printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
@@ -800,6 +797,13 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
         }
     }
 
+    for(i = 0; i < SO_HEIGHT; i++) {
+    	for(j = 0; j < SO_WIDTH; j++) {
+    		if(mappa->matrice[i][j].cellType != BLOCK) {
+    			mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN + rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN);
+    		}
+    	}
+    }
 }
 
 /*DECIDERE COME FARE CON NICK*/

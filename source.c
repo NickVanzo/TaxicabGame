@@ -11,7 +11,7 @@ int exitFromLoop = 0;
 
 int main(int argc,  char * argv[]){
     
-    if(argc != 3){
+    if(argc != 4){
         printf("Error parametrs not matching!\n");
         exit(EXIT_FAILURE);
     }

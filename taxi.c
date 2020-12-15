@@ -65,22 +65,18 @@ int main(int argc, char * argv[]) {
     int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
     struct grigliaCitta * mappa; /*mappa della citta*/
     int tempx, tempy;
-    int so_taxi, so_timeout; /*recupero il numero di taxi nella simulazione*/
+    int so_timeout; /*recupero il numero di taxi nella simulazione*/
     int queue_key, queue_id; /*Variabili per la coda di messaggi*/
     int taxiSemaphore_id;
     int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
-    int so_time_min, so_time_max;
 
     srand(getpid());
     /*gestisco il segnale di allarme per uscire*/
     signal(SIGALRM, signalHandler);
 
     TEST_ERROR;
-    so_time_min = atol(argv[1]); 
-    so_time_max = atol(argv[2]); /*recupero la durata della simulazione*/
     /*500000000 sono 0,5 secondi*/
-    time_struct.tv_sec = 0;
-    time_struct.tv_nsec = so_time_min + (rand() % (so_time_max - so_time_min)); 
+    
 
     /*Apertura coda di messaggi*/
     queue_key = ftok("ipcKey.key", 1);
@@ -226,6 +222,8 @@ void move(struct grigliaCitta * mappa) {
 
 
 void moveUp(struct grigliaCitta * mappa) {
+    time_struct.tv_sec = 0;
+    time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     P(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
     P(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove vado*/
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
@@ -245,6 +243,8 @@ void moveUp(struct grigliaCitta * mappa) {
 
 
 void moveDown(struct grigliaCitta * mappa) {
+    time_struct.tv_sec = 0;
+    time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     P(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
     P(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove vado*/
@@ -264,6 +264,8 @@ void moveDown(struct grigliaCitta * mappa) {
 
 
 void moveLeft(struct grigliaCitta * mappa) {
+    time_struct.tv_sec = 0;
+    time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex); /*Ottengo il mutex dove vado*/
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
@@ -283,6 +285,8 @@ void moveLeft(struct grigliaCitta * mappa) {
 
 
 void moveRight(struct grigliaCitta * mappa) {
+    time_struct.tv_sec = 0;
+    time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex); /*prendo il mutex dove vado*/

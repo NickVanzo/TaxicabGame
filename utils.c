@@ -118,6 +118,7 @@ void P(int semaphore){
     semop(semaphore, &sops, 1);
 }
 
+
 void V(int semaphore){
     struct sembuf sops;
     sops.sem_flg = 0;
