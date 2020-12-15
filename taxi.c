@@ -111,6 +111,7 @@ int main(int argc, char * argv[]) {
     
     move(mappa);
 
+
     /*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     /*CONTINUA*/
     /*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 10, 10);*/
@@ -296,7 +297,11 @@ void closestSource(struct grigliaCitta * mappa) {
     int minDistance = INT_MAX;
     int positionOfMinDistance = 0, tmp;
 
-    if (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].cellType == SOURCE) return;
+    if (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].cellType == SOURCE) {
+        posizioneTaxi.destR = i;
+        posizioneTaxi.destC = j;
+        return;
+    }
 
     for (i = 0; i < SO_HEIGHT; i++) {
         for (j = 0; j < SO_WIDTH; j++) {
