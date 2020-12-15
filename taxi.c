@@ -1,4 +1,11 @@
 #include "include_main.h"
+#define TEST_ERROR    if (errno) {fprintf(stderr, \
+                       "%s:%d: PID=%5d: Error %d (%s)\n",\
+                       __FILE__,\
+                       __LINE__,\
+                       getpid(),\
+                       errno,\
+                       strerror(errno));}
 
 /*
 	Questa funzione spawna una taxi in una posizione casuale della mappa facendo attenzione che la posizione casuale risponda ai seguenti criteri:
@@ -52,19 +59,28 @@ posizioneTaxi;
 
 int SO_TIMEOUT;
 
+struct timespec time_struct;
+
 int main(int argc, char * argv[]) {
     int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
     struct grigliaCitta * mappa; /*mappa della citta*/
     int tempx, tempy;
-    int so_taxi = atoi(argv[2]); /*recupero il numero di taxi nella simulazione*/
+    int so_taxi, so_timeout; /*recupero il numero di taxi nella simulazione*/
     int queue_key, queue_id; /*Variabili per la coda di messaggi*/
     int taxiSemaphore_id;
     int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
+    int so_time_min, so_time_max;
 
+    srand(getpid());
     /*gestisco il segnale di allarme per uscire*/
     signal(SIGALRM, signalHandler);
 
-    SO_TIMEOUT = atoi(argv[1]); /*recupero la durata della simulazione*/
+    TEST_ERROR;
+    so_time_min = atol(argv[1]); 
+    so_time_max = atol(argv[2]); /*recupero la durata della simulazione*/
+    /*500000000 sono 0,5 secondi*/
+    time_struct.tv_sec = 0;
+    time_struct.tv_nsec = so_time_min + (rand() % (so_time_max - so_time_min)); 
 
     /*Apertura coda di messaggi*/
     queue_key = ftok("ipcKey.key", 1);
@@ -100,7 +116,6 @@ int main(int argc, char * argv[]) {
 
     shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
-    srand(getpid());
     /*fprintf(stderr, "ASPETTATTUTTI:%d\n", semctl(taxiSemaphore_id, 0, GETVAL));DEBUG*/
     /*fprintf(stderr, "Posizione prima dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
     spawnTaxi(mappa, taxiSemaphore_id);
@@ -144,7 +159,6 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id) {
 
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     V(taxiSemaphore_id);
-    
 }
 
 
@@ -205,6 +219,8 @@ void move(struct grigliaCitta * mappa) {
         posizioneTaxi.posR = posizioneTaxi.destR;
         posizioneTaxi.posC = posizioneTaxi.destC;
     }
+
+
 }
 
 
@@ -224,6 +240,7 @@ void moveUp(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
+    nanosleep(&time_struct, NULL);
 }
 
 
@@ -242,6 +259,7 @@ void moveDown(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
+    nanosleep(&time_struct, NULL);
 }
 
 
@@ -260,7 +278,7 @@ void moveLeft(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
-
+    nanosleep(&time_struct, NULL);    
 }
 
 
@@ -279,6 +297,7 @@ void moveRight(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
+    nanosleep(&time_struct, NULL);
 }
 
 
@@ -315,6 +334,7 @@ void closestSource(struct grigliaCitta * mappa) {
             }
         }
     }
+
 }
 
 int enumSoSources(struct grigliaCitta *mappa) {
@@ -339,4 +359,5 @@ void getRide(int msg_queue_id, long so_source){
 	}
     posizioneTaxi.destR = myMessage.xDest;
     posizioneTaxi.destC = myMessage.yDest;
+
 }

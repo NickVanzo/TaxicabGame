@@ -54,7 +54,7 @@ int main(int argc,  char * argv[]){
     signal(SIGALRM, signalHandler);
 
     while(exitFromLoop == 0){
-        alarm((rand() % SO_DURATION)+1);  
+        alarm((rand() % (SO_DURATION/10))+1);  
         pause();
     }
     
@@ -68,8 +68,8 @@ void signalHandler(int signal){
         case SIGALRM:
             myMessage.mtype = (rand()%SO_SOURCE)+1;
             do{
-                myMessage.xDest = rand()%SO_WIDTH;
-                myMessage.yDest = rand()%SO_HEIGHT;
+                myMessage.xDest = rand()%SO_HEIGHT;
+                myMessage.yDest = rand()%SO_WIDTH;
             }while(mappa->matrice[myMessage.xDest][myMessage.yDest].cellType != ROAD);
                 
 

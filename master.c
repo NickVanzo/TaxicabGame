@@ -173,13 +173,12 @@ int main(int argc, char * argv[]) {
 
     shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
-    /*fprintf(stdout, "VALORE DELL'ID DEL SEMAFORO%d\n", taxiSemaphore_id);*/
-    /*fprintf(stdout, "VALORE DI SO_TAXI PRIMA:%d\n", SO_TAXI);*/
     semctl(taxiSemaphore_id, 0, SETVAL, SO_TAXI);
     TEST_ERROR;
-    /*fprintf(stdout, "Valore del semaforo: %d", semctl(taxiSemaphore_id, 0, GETVAL));*/
 
-    /*fprintf(stderr, "Valore del semaforo aspettaTutti: %d\n", semctl(mappa->aspettaTutti, 0, GETVAL));*/
+ 
+    sprintf(SO_TIMENSEC_MIN_PARAM, "%d", SO_TIMENSEC_MIN);
+    sprintf(SO_TIMENSEC_MAX_PARAM, "%d", SO_TIMENSEC_MAX);
     /*Creao un array contenente i pid dei figli taxi creati*/
     taxiCreated = malloc(SO_TAXI * sizeof(int));
     for(i = 0; i < SO_TAXI; i++) {
@@ -190,8 +189,8 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("./taxi", "taxi",SO_TIMEOUT_PARAM ,SO_TAXI_PARAM, NULL);
-            printf("Error loading new program %s!\n\n", strerror(errno));
+            execlp("./taxi","taxi", SO_TIMENSEC_MIN_PARAM, SO_TIMENSEC_MAX_PARAM, NULL);
+            printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
         default:
