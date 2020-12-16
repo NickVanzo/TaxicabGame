@@ -96,6 +96,7 @@ int main(int argc, char * argv[]) {
     int runningTime = 0;
     int taxiSemaphore_id;
     int trashKillSignal; /*variabile per raccogliere stato segnale uscita*/
+    int wait_pid;
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
@@ -186,7 +187,7 @@ int main(int argc, char * argv[]) {
             exit(EXIT_FAILURE);
             break;
         case 0:
-            execlp("./taxi","taxi", SO_TIMEOUT_PARAM, NULL);
+            execlp("./taxi","taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM,NULL);
             printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
             exit(EXIT_FAILURE);
             break;
@@ -204,6 +205,29 @@ int main(int argc, char * argv[]) {
     }
 
     while (!exitFromProgram) {
+        sprintf(SO_DURATION_PARAM, "%d", SO_DURATION - runningTime);
+
+        /*Se un taxi muore lo ricreiamo in un altra posizione della griglia*/
+        while((wait_pid = waitpid(-1, NULL, WNOHANG)) == -1) {
+            for(i = 0; i < SO_TAXI; i++) {
+                if(taxiCreated[i] == wait_pid) {
+                    taxiCreated[i] = fork();
+                    switch(taxiCreated[i]) {
+                        case -1:
+                            printf("Error while trying to fork()! %s\n", strerror(errno));
+                            exit(EXIT_FAILURE);
+                            break;
+                        case 0:
+                            execlp("./taxi","taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+                            printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
+                            exit(EXIT_FAILURE);
+                            break;
+                        default:
+                            break;
+                    }                    
+                }
+            }
+        }
 
         aggiornaStatistiche(mappa, mapStats, queue_id);
 
@@ -258,8 +282,9 @@ int main(int argc, char * argv[]) {
 
     free(childSourceCreated);
     free(taxiCreated);
-    shmdt(mappa);
+    semctl(mappa -> mutex, 0, IPC_RMID);
     semctl(taxiSemaphore_id, 0, IPC_RMID);
+    shmdt(mappa);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
 
@@ -796,6 +821,13 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
 
         }
     }
+    /*Mutex per modificare le variabili contatore nella struct grigliacitta*/
+    do{
+        mappa -> mutex = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0666);
+        }while(tmp == -1); /*aspetto che il semaforo sia allocato*/
+        tmp = -1;
+    semctl(mappa -> mutex, 0, SETVAL, 1);
+
 }
 
 /*DECIDERE COME FARE CON NICK*/
@@ -803,5 +835,8 @@ void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQu
     struct msqid_ds buffer;
     msgctl(msgQueueId, IPC_STAT, &buffer);
     statistiche[1] = buffer.msg_qnum;
-
+    P(mappa -> mutex);
+    statistiche[2] = mappa -> aborted_rides;
+    statistiche[0] = mappa -> successes_rides;
+    V(mappa -> mutex);
 }

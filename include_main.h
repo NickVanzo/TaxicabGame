@@ -157,6 +157,9 @@ struct msgBuf{
 struct grigliaCitta{
     map_cell matrice[SO_HEIGHT][SO_WIDTH];
     int aspettaTutti;
+    int mutex; 
+    int aborted_rides;
+    int successes_rides;
 };
 
 #ifndef DEFINE_CUSTOM_FUNCTIONS

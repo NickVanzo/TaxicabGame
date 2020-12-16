@@ -1,11 +1,4 @@
 #include "include_main.h"
-#define TEST_ERROR    if (errno) {fprintf(stderr, \
-                       "%s:%d: PID=%5d: Error %d (%s)\n",\
-                       __FILE__,\
-                       __LINE__,\
-                       getpid(),\
-                       errno,\
-                       strerror(errno));}
 
 /*
 	Questa funzione spawna una taxi in una posizione casuale della mappa facendo attenzione che la posizione casuale risponda ai seguenti criteri:
@@ -45,10 +38,21 @@ void moveRight(struct grigliaCitta * mappa);
 */
 void getRide(int msg_queue_id, long so_source);
 
-boolean terminateTaxi = FALSE;
-
 void signalHandler(int signalNo);
 
+
+int Ptemp(int semaphore, long time) {
+	struct timespec timeout_taxi;
+	struct sembuf sops;
+	sops.sem_flg = 0;
+	sops.sem_num = 0;
+    sops.sem_op = -1;
+    timeout_taxi.tv_sec = 0;
+    timeout_taxi.tv_nsec = time;
+ 	return semtimedop(semaphore, &sops, 1, &timeout_taxi);
+}
+
+/*Variabili e struct*/
 struct _posTaxi {
     int posR;
     int posC;
@@ -57,26 +61,30 @@ struct _posTaxi {
 }
 posizioneTaxi;
 
-int SO_TIMEOUT;
-
+int so_timeout;
 struct timespec time_struct;
+boolean exit_program;
+boolean ride_taken;
+
 
 int main(int argc, char * argv[]) {
     int posizione_taxi_x, posizione_taxi_y; /*Coordinate della posizione del taxi*/
     struct grigliaCitta * mappa; /*mappa della citta*/
     int tempx, tempy;
-    int so_timeout; /*recupero il numero di taxi nella simulazione*/
     int queue_key, queue_id; /*Variabili per la coda di messaggi*/
     int taxiSemaphore_id;
+    int time_duration;
     int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
-
     srand(getpid());
     /*gestisco il segnale di allarme per uscire*/
     signal(SIGALRM, signalHandler);
+    exit_program = FALSE;
+    ride_taken = FALSE;
 
-    TEST_ERROR;
     /*500000000 sono 0,5 secondi*/
-    
+    so_timeout = atol(argv[1]);
+    time_duration = atoi(argv[2]);
+    alarm(time_duration);
 
     /*Apertura coda di messaggi*/
     queue_key = ftok("ipcKey.key", 1);
@@ -112,20 +120,18 @@ int main(int argc, char * argv[]) {
 
     shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
-    /*fprintf(stderr, "ASPETTATTUTTI:%d\n", semctl(taxiSemaphore_id, 0, GETVAL));DEBUG*/
-    /*fprintf(stderr, "Posizione prima dello spawn: [%d][%d]\n", posizione_taxi_x, posizione_taxi_y);*/
+   	
     spawnTaxi(mappa, taxiSemaphore_id);
-    closestSource(mappa);
-    move(mappa);
-    
-    getRide(queue_id, (long)enumSoSources(mappa));
-    
-    move(mappa);
+    while(!exit_program) {
+	    closestSource(mappa);
+	    move(mappa);
+	    getRide(queue_id, (long)enumSoSources(mappa));
+	    move(mappa);
+    }
 
 
     /*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     /*CONTINUA*/
-    /*moveTowards_sosource(mappa, posizione_taxi_x, posizione_taxi_y, 10, 10);*/
     shmdt(mappa);
     exit(EXIT_SUCCESS);
 }
@@ -214,9 +220,13 @@ void move(struct grigliaCitta * mappa) {
     } else {
         posizioneTaxi.posR = posizioneTaxi.destR;
         posizioneTaxi.posC = posizioneTaxi.destC;
-    }
-
-
+        if(ride_taken) {
+	        P(mappa -> mutex);
+	        mappa -> successes_rides++;
+	        V(mappa -> mutex);
+	    	ride_taken = FALSE;
+	    	}
+        }
 }
 
 
@@ -224,9 +234,37 @@ void move(struct grigliaCitta * mappa) {
 void moveUp(struct grigliaCitta * mappa) {
     time_struct.tv_sec = 0;
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
-    P(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
-    P(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove vado*/
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
+    	/*Il semaforo non è riuscito ad ottenere il semaforo, aumento corse abortite e rilascio eventuali risorse ottenute*/
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    }
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+	    P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+	    V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
+	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+	    exit(EXIT_FAILURE);
+    } 
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
+    	V(mappa -> matrice[posizioneTaxi.posR -1][posizioneTaxi.posC].mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    }
 
     /*SEZIONE CRITICA*/
     mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
@@ -245,9 +283,36 @@ void moveUp(struct grigliaCitta * mappa) {
 void moveDown(struct grigliaCitta * mappa) {
     time_struct.tv_sec = 0;
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
-    P(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
-    P(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove vado*/
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    }
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
+	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+	    exit(EXIT_FAILURE);
+    }
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+	    P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+	    V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
+	    V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
+	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+	    exit(EXIT_FAILURE);
+    }
 
     /*SEZIONE CRITICA*/
     mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
@@ -266,9 +331,36 @@ void moveDown(struct grigliaCitta * mappa) {
 void moveLeft(struct grigliaCitta * mappa) {
     time_struct.tv_sec = 0;
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex); /*Ottengo il mutex dove vado*/
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    } 
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    } /*Ottengo il mutex dove vado*/
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+		P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+		V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
+		V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex);
+		P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+		exit(EXIT_FAILURE);    	
+    }
 
     /*SEZIONE CRITICA*/
     mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--; /*Abbandonando la cella diminuisco il numero di taxi in quella cella*/
@@ -287,9 +379,36 @@ void moveLeft(struct grigliaCitta * mappa) {
 void moveRight(struct grigliaCitta * mappa) {
     time_struct.tv_sec = 0;
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Ottengo il mutex dove sono*/
-    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex); /*prendo il mutex dove vado*/
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    }
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    } 
+    if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex, so_timeout) == -1 && errno == EAGAIN) {
+    	P(mappa -> mutex);
+    	mappa -> aborted_rides++;
+    	V(mappa -> mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	exit(EXIT_FAILURE);
+    } 
 
     /*SEZIONE CRITICA*/
     mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -309,6 +428,7 @@ void moveRight(struct grigliaCitta * mappa) {
 void signalHandler(int signalNo) {
     switch (signalNo) {
     case SIGALRM:
+	    exit_program = TRUE;
         break;
 
     }
@@ -358,10 +478,9 @@ int enumSoSources(struct grigliaCitta *mappa) {
 void getRide(int msg_queue_id, long so_source){
     struct msgBuf myMessage;
 	if(msgrcv(msg_queue_id, &myMessage, 2*sizeof(int), so_source, 0) == -1) {
-		fprintf(stderr, "Errore codice: %d (%s)\nsono in getRide()", errno, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
     posizioneTaxi.destR = myMessage.xDest;
     posizioneTaxi.destC = myMessage.yDest;
-
+    ride_taken = TRUE;
 }

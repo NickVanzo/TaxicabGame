@@ -10,7 +10,7 @@ void signalHandler(int signal);
 int exitFromLoop = 0;
 
 int main(int argc,  char * argv[]){
-    
+    fprintf(stdout, "IL MIO PID: %d\n", getpid());
     if(argc != 4){
         printf("Error parametrs not matching!\n");
         exit(EXIT_FAILURE);
@@ -52,9 +52,10 @@ int main(int argc,  char * argv[]){
 
 
     signal(SIGALRM, signalHandler);
+    signal(SIGUSR1, signalHandler);
 
     while(exitFromLoop == 0){
-        alarm((rand() % (SO_DURATION/10))+1);  
+        alarm((rand() % (SO_DURATION/40))+1);  
         pause();
     }
     
@@ -77,10 +78,6 @@ void signalHandler(int signal){
                 write(1,"Error sending message!\n", strlen("Error sending message!\n"));
             }
             break;
-          case SIGUSR1:
-          	exitFromLoop = 1;
-          	break;
-
         default:
             break;
     }
