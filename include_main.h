@@ -83,7 +83,7 @@
     #define DEFINES
 
     /*dimensione della mappa del mondo*/
-    #define SO_WIDTH 30 /*colonne*/
+    #define SO_WIDTH 20 /*colonne*/
     #define SO_HEIGHT 10 /*righe*/
 #endif
 

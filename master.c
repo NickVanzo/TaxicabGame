@@ -576,9 +576,9 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
 
-	           
+	           P(mappa->mutex);
               sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-
+               V(mappa->mutex);
 
             if (mappa -> matrice[i][j].cellType == ROAD) {
                 /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/

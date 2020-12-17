@@ -257,6 +257,7 @@ void moveUp(struct grigliaCitta * mappa) {
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     }
@@ -267,6 +268,7 @@ void moveUp(struct grigliaCitta * mappa) {
 	    V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
 	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
 	    exit(EXIT_FAILURE);
     } 
@@ -278,7 +280,9 @@ void moveUp(struct grigliaCitta * mappa) {
     	V(mappa -> matrice[posizioneTaxi.posR -1][posizioneTaxi.posC].mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+
     	exit(EXIT_FAILURE);
     }
 
@@ -320,6 +324,8 @@ void moveDown(struct grigliaCitta * mappa) {
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
     	exit(EXIT_FAILURE);
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
@@ -330,6 +336,8 @@ void moveDown(struct grigliaCitta * mappa) {
 	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
 	    exit(EXIT_FAILURE);
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
@@ -340,7 +348,9 @@ void moveDown(struct grigliaCitta * mappa) {
 	    V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
 	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
-    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);    
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
 	    exit(EXIT_FAILURE);
     }
 
@@ -381,6 +391,7 @@ void moveLeft(struct grigliaCitta * mappa) {
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     } 
@@ -391,6 +402,7 @@ void moveLeft(struct grigliaCitta * mappa) {
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     } /*Ottengo il mutex dove vado*/
@@ -402,6 +414,8 @@ void moveLeft(struct grigliaCitta * mappa) {
 		V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex);
 		P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
 		exit(EXIT_FAILURE);    	
     }
@@ -443,6 +457,8 @@ void moveRight(struct grigliaCitta * mappa) {
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     }
@@ -453,6 +469,8 @@ void moveRight(struct grigliaCitta * mappa) {
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     } 
@@ -464,6 +482,8 @@ void moveRight(struct grigliaCitta * mappa) {
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
+    	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
+
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	exit(EXIT_FAILURE);
     } 
