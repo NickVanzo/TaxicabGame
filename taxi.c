@@ -141,6 +141,7 @@ int main(int argc, char * argv[]) {
     /*Imposto l'operazione affinchè i processi aspettino che il valore del semafoto aspettaTutti sia 0. Quando è zero ripartono tutti da qui*/
     /*CONTINUA*/
     shmdt(mappa);
+    shmdt(taxi_statistiche);
     exit(EXIT_SUCCESS);
 }
 

@@ -269,15 +269,6 @@ int main(int argc, char * argv[]) {
       stampaStatistiche(mappa, mapStats, TRUE, SO_TOP_CELLS, runningTime);
     }
 
-    /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
-    for (i = 0; i < SO_HEIGHT; i++) {
-        for (j = 0; j < SO_WIDTH; j++) {
-            semctl(mappa -> matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
-            semctl(mappa -> matrice[i][j].mutex, j, IPC_RMID, 0); /*rimuovo i semafori*/
-
-        }
-    }
-
 
 
    /*attendo la morte di tutti i figli*/
@@ -292,12 +283,23 @@ int main(int argc, char * argv[]) {
    }
 
 
+    /*libero la memoria condivisa ED ELIMINO TUTTI I SEMAFORI*/
+    for (i = 0; i < SO_HEIGHT; i++) {
+        for (j = 0; j < SO_WIDTH; j++) {
+            semctl(mappa -> matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
+            semctl(mappa -> matrice[i][j].mutex, j, IPC_RMID, 0); /*rimuovo i semafori*/
+
+        }
+    }
+
     free(childSourceCreated);
     free(taxiCreated);
     semctl(mappa -> mutex, 0, IPC_RMID);
     semctl(taxiSemaphore_id, 0, IPC_RMID);
     semctl(taxi_statistiche -> mutex, 0, IPC_RMID);
     shmdt(mappa);
+    shmdt(taxi_statistiche);
+    shmctl(shmID_stats, IPC_RMID, NULL);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
 
