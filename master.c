@@ -424,37 +424,51 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
         * SO_DURATION = atoi(argv[10]);
 
     } else {
+        
         printf("Insert number of taxi available for the simulation: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_TAXI = atoi(bufferTemp); /*converto da stringa a intero*/
-
-        printf("Insert number of sources available for the simulation: ");
-        fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_SOURCES = atoi(bufferTemp); /*converto da stringa a intero*/
-
-        printf("Insert number of holes available for the simulation: ");
-        fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_HOLES = atoi(bufferTemp); /*converto da stringa a intero*/
+        * SO_TAXI = abs(atoi(bufferTemp)); /*converto da stringa a intero*/
+        do {
+            printf("Insert number of sources available for the simulation(MAX = %d): ", SO_WIDTH * SO_HEIGHT);
+            fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+            * SO_SOURCES = atoi(bufferTemp); /*converto da stringa a intero*/
+            if(* SO_SOURCES >= SO_WIDTH * SO_HEIGHT) {
+                printf("Insert again the number of SOURCES. Too many!!\n");
+            }
+        } while(* SO_SOURCES >= SO_WIDTH * SO_HEIGHT);
+        do {
+            printf("Insert number of holes available for the simulation: ");
+            fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+            * SO_HOLES = abs(atoi(bufferTemp)); /*converto da stringa a intero*/
+            if(* SO_HOLES >= (SO_WIDTH * SO_HEIGHT - * SO_SOURCES)) {
+                printf("Insert again the number of HOLES. Too many holes.\n");
+            }            
+        } while(* SO_HOLES >= (SO_WIDTH * SO_HEIGHT - * SO_SOURCES));
 
         printf("Insert minimum capacity for each cell: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_CAP_MIN = atoi(bufferTemp); /*converto da stringa a intero*/
+        * SO_CAP_MIN = abs(atoi(bufferTemp)); /*converto da stringa a intero*/
 
         printf("Insert maximum capacity for each cell: ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
         * SO_CAP_MAX = atoi(bufferTemp); /*converto da stringa a intero*/
 
-        printf("Insert minimum crossing time for each cell: ");
+        printf("Insert minimum crossing time for each cell (nanoseconds - max: 999999999): ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
         * SO_TIMENSEC_MIN = atoi(bufferTemp); /*converto da stringa a intero*/
 
-        printf("Insert maximum crossing time for each cell: ");
+        printf("Insert maximum crossing time for each cell (nanoseconds - max: 999999999): ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
         * SO_TIMENSEC_MAX = atoi(bufferTemp); /*converto da stringa a intero*/
 
-        printf("Insert number of top cells to be shown at the end of the simulation: ");
-        fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
-        * SO_TOP_CELLS = atoi(bufferTemp); /*converto da stringa a intero*/
+        do {
+            printf("Insert number of top cells to be shown at the end of the simulation: ");
+            fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+            * SO_TOP_CELLS = atoi(bufferTemp); /*converto da stringa a intero*/            
+            if(* SO_TOP_CELLS <= SO_WIDTH * SO_HEIGHT - * SO_HOLES) {
+                printf("Insert again the number of SO_TOP_CELLS. Too many!!\n");
+            }
+        } while(* SO_TOP_CELLS <= SO_WIDTH * SO_HEIGHT - * SO_HOLES);
 
         printf("Insert taxi move timeout (milliseconds): ");
         fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
@@ -464,6 +478,9 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
             printf("Insert simulation duration (seconds >= 2): ");
             fgets(bufferTemp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non idandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
             * SO_DURATION = atoi(bufferTemp); /*converto da stringa a intero*/
+            if(* SO_DURATION < 2) {
+                printf("Insert again the number SO_DURATION value. Too small!!\n"); 
+            }
         } while ( * SO_DURATION < 2); /*la simulazione deve durare almeno 10 secondi*/
 
     }
@@ -472,7 +489,7 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
     if (SO_HEIGHT + 4 < 14) screenHeight = 14; /*se la dimensione della tabella è 9, diventa 13 (con 2 extra sopra e 2 extra sotto*/
     else screenHeight = SO_HEIGHT + 4;
 
-    screenWidth = 7 * (2 + SO_WIDTH) + 55; /*lunghezza della singola cella per la dimenzione della mappa piu la len max delle stat*/
+    screenWidth = 4 * (2 + SO_WIDTH) + 55; /*lunghezza della singola cella per la dimenzione della mappa piu la len max delle stat*/
 
     if ( * SO_DURATION < 2) {
         printf("Error: duration of simulation is less than 2 seconds...\nPlease insert valid inputs...\n");
@@ -498,8 +515,6 @@ void setupSimulation(int * SO_TAXI, int * SO_SOURCES, int * SO_HOLES, int * SO_C
           if(tmpChar == 'y') *printWithAscii = TRUE;
           else *printWithAscii = FALSE;
 
-          printf("\nSimulation will now start. Press any key to begin....");
-          getc(stdin);
         }
 
         tmpChar = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
@@ -560,11 +575,11 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     for (k = 0; k < 2; k++, printedStats++, rowCount++) {
         /*stampo il bordo superiore*/
-        colorPrintf("       ", GRAY, GRAY);
+        colorPrintf("    ", GRAY, GRAY);
         for (i = 0; i < SO_WIDTH + 1; i++){
-            sprintf(strTmp, " %-5d ", i);
+            sprintf(strTmp, "%-4d", i);
             if(k>0 && i<SO_WIDTH) colorPrintf(strTmp, RED, GRAY);
-            else colorPrintf("       ", GRAY, GRAY);
+            else colorPrintf("    ", GRAY, GRAY);
         }
         printf("%s\n", stats[printedStats]);
     }
@@ -574,12 +589,12 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     for (i = 0; i < SO_HEIGHT; i++, rowCount++) {
         /*stampo il corpo della mappa*/
-        sprintf(strTmp, " %5d ", i);
+        sprintf(strTmp, "%4d", i);
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++) {
 
 	           P(mappa->mutex);
-              sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
+              sprintf(strTmp, "%-4d", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
                V(mappa->mutex);
 
             if (mappa -> matrice[i][j].cellType == ROAD) {
@@ -594,11 +609,11 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
             } else if (mappa -> matrice[i][j].cellType == SOURCE) {
                 colorPrintf(strTmp, BLACK, MAGENTA);
             } else {
-                colorPrintf("       ", BLACK, BLACK);
+                colorPrintf("    ", BLACK, BLACK);
             }
         }
 
-        colorPrintf("       ", GRAY, GRAY); /*stampo bordo laterale dx*/
+        colorPrintf("    ", GRAY, GRAY); /*stampo bordo laterale dx*/
         if (printedStats < numberOfStats) {
             printf("%s\n", stats[printedStats]);
             printedStats++;
@@ -609,7 +624,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
 
     /*stampo bordo inferiore*/
     for (k = 0; k < 2; k++, rowCount++) {
-        for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("       ", GRAY, GRAY);
+        for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("    ", GRAY, GRAY);
         if (printedStats < numberOfStats) {
             /*stampo statistica a financo banda grigia*/
             printf("%s\n", stats[printedStats]);

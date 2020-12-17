@@ -12,6 +12,10 @@ source: source.o
 taxi: taxi.o utils.c	
 	$(CC) taxi.o utils.o -o taxi -lm
 
+rebuild: 
+	make clear
+	make 
+
 source.o: source.c
 	$(CC) -c source.c -o source.o
 

@@ -54,7 +54,7 @@ int main(int argc,  char * argv[]){
     signal(SIGUSR1, signalHandler);
 
     while(exitFromLoop == 0){
-        alarm(1);  
+        alarm((rand() % 5) + 1);  
         pause();
     }
     

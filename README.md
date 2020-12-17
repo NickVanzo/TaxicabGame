@@ -48,5 +48,9 @@ Parametri OK:
 Parametri dense
 ./master 95 190 10 3 5 100000000 300000000 40 1000 20
 
+Domanda da fare a Bini:
 
+I ) La funzione atexit() viene eseguita quando lancio un control + C da terminale 
+II) Controllare se i processi morti usando come parametri la large siano corretti (media di 20MILA morti)
+III) le SO_TOP_CELLS devono includere le SO_SOURCES oppure devono essere solamente celle di tipo ROAD?
 
