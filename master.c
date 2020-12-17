@@ -83,13 +83,15 @@ boolean exitFromProgram;
 */
 void signalHandler(int signal);
 
+struct taxiStatistiche * taxi_statistiche; 
+
 int main(int argc, char * argv[]) {
     int i, j; /*variabili iteratrici nei cicli. numerobuchi conta il numero di buchi che ho creato*/
     int SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION; /*parametri letti o inseriti a compilazione*/
     int mapStats[6]; /*Variabile contenente le statistiche della mappa*/
     key_t queueKey;
     int queue_id;
-    int shmId, shmKey,  shmKey_ForTaxi;
+    int shmId, shmKey,  shmKey_ForTaxi, shmKey_stats, shmID_stats;
     int * childSourceCreated;
     int * taxiCreated;
     char SO_TAXI_PARAM[10], SO_SOURCES_PARAM[10], SO_HOLES_PARAM[10], SO_CAP_MIN_PARAM[10], SO_CAP_MAX_PARAM[10], SO_TIMENSEC_MIN_PARAM[10], SO_TIMENSEC_MAX_PARAM[10], SO_TOP_CELLS_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
@@ -128,7 +130,13 @@ int main(int argc, char * argv[]) {
         printf("Error at shmat! error code is %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    /*memoria condivisa per le statistiche dei taxi*/
+    shmKey_stats = ftok("ipcKey.key", 5);
+    shmID_stats = shmget(shmKey_stats, sizeof(struct taxiStatistiche), IPC_CREAT | IPC_EXCL | 0666);
+    taxi_statistiche = shmat(shmID_stats, NULL, 0);
     /*MEMORIA CONDIVISA CREATA CON SUCCESSO*/
+
+
 
     /*IMPOSTAZIONE HANDLER SEGNALE TIMER*/
     signal(SIGALRM, signalHandler);
@@ -288,6 +296,7 @@ int main(int argc, char * argv[]) {
     free(taxiCreated);
     semctl(mappa -> mutex, 0, IPC_RMID);
     semctl(taxiSemaphore_id, 0, IPC_RMID);
+    semctl(taxi_statistiche -> mutex, 0, IPC_RMID);
     shmdt(mappa);
     shmctl(shmId, IPC_RMID, NULL);
     msgctl(queue_id, IPC_RMID, NULL);
@@ -830,6 +839,14 @@ void initMap(struct grigliaCitta * mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO
         tmp = -1;
     semctl(mappa -> mutex, 0, SETVAL, 1);
 
+    taxi_statistiche -> strada_fatta = 0;
+    taxi_statistiche -> clienti_serviti = 0;
+    taxi_statistiche -> tempo_in_strada = 0;
+    taxi_statistiche -> pid_strada_fatta = 0;
+    taxi_statistiche -> pid_clienti_serviti = 0;
+    taxi_statistiche -> pid_tempo_in_strada = 0;
+    taxi_statistiche -> mutex = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0666);
+    semctl(taxi_statistiche -> mutex, 0, SETVAL, 1);
 }
 
 /*DECIDERE COME FARE CON NICK*/
@@ -841,4 +858,9 @@ void aggiornaStatistiche(struct grigliaCitta *mappa, int *statistiche, int msgQu
     statistiche[2] = mappa -> aborted_rides;
     statistiche[0] = mappa -> successes_rides;
     V(mappa -> mutex);
+    P(taxi_statistiche -> mutex);
+    statistiche[3] = taxi_statistiche -> pid_tempo_in_strada;
+    statistiche[4] = taxi_statistiche -> pid_strada_fatta;
+    statistiche[5] = taxi_statistiche -> pid_clienti_serviti;
+    V(taxi_statistiche -> mutex);
 }

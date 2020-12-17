@@ -83,8 +83,8 @@
     #define DEFINES
 
     /*dimensione della mappa del mondo*/
-    #define SO_WIDTH 60 /*colonne*/
-    #define SO_HEIGHT 20 /*righe*/
+    #define SO_WIDTH 30 /*colonne*/
+    #define SO_HEIGHT 10 /*righe*/
 #endif
 
 #ifndef COLORS_SCHEME
@@ -160,6 +160,16 @@ struct grigliaCitta{
     int mutex; 
     int aborted_rides;
     int successes_rides;
+};
+
+struct taxiStatistiche {
+    int strada_fatta;
+    int clienti_serviti;
+    unsigned long int tempo_in_strada;
+    int pid_strada_fatta;
+    int pid_clienti_serviti;
+    int pid_tempo_in_strada;
+    int mutex;
 };
 
 #ifndef DEFINE_CUSTOM_FUNCTIONS

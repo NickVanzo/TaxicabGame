@@ -40,6 +40,7 @@ void getRide(int msg_queue_id, long so_source);
 
 void signalHandler(int signalNo);
 
+struct taxiStatistiche * taxi_statistiche;
 
 int Ptemp(int semaphore, long time) {
 	struct timespec timeout_taxi;
@@ -62,6 +63,9 @@ struct _posTaxi {
 posizioneTaxi;
 
 int so_timeout;
+int strada_percorsa;
+int richieste_finite;
+unsigned long int tempo_in_strada;
 struct timespec time_struct;
 boolean exit_program;
 boolean ride_taken;
@@ -74,7 +78,7 @@ int main(int argc, char * argv[]) {
     int queue_key, queue_id; /*Variabili per la coda di messaggi*/
     int taxiSemaphore_id;
     int time_duration;
-    int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi; /*Variabili per la memoria condivisa*/
+    int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi, shmKey_stats, shmID_stats; /*Variabili per la memoria condivisa*/
     srand(getpid());
     /*gestisco il segnale di allarme per uscire*/
     signal(SIGALRM, signalHandler);
@@ -120,6 +124,10 @@ int main(int argc, char * argv[]) {
 
     shmKey_ForTaxi = ftok("ipcKey.key", 3);
     taxiSemaphore_id = semget(shmKey_ForTaxi, 1, IPC_CREAT | 0666);
+    /*Statistiche taxi memoria condivisa attach*/
+    shmKey_stats = ftok("ipcKey.key", 5);
+    shmID_stats = shmget(shmKey_stats, sizeof(struct taxiStatistiche), IPC_CREAT | 0666);
+    taxi_statistiche = shmat(shmID_stats, NULL, 0);
    	
     spawnTaxi(mappa, taxiSemaphore_id);
     while(!exit_program) {
@@ -223,7 +231,16 @@ void move(struct grigliaCitta * mappa) {
 	        P(mappa -> mutex);
 	        mappa -> successes_rides++;
 	        V(mappa -> mutex);
+
+	        richieste_finite++;
+	    	P(taxi_statistiche -> mutex);
+	    	if(richieste_finite > taxi_statistiche -> clienti_serviti) {
+	    		taxi_statistiche -> clienti_serviti = richieste_finite;
+	    		taxi_statistiche -> pid_clienti_serviti = getpid();
+	    	}
+	    	V(taxi_statistiche -> mutex);
 	    	ride_taken = FALSE;
+
 	    	}
         }
 }
@@ -275,6 +292,20 @@ void moveUp(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
+
+    /*blocco di gestione delle risorse da stampare a terminale*/
+    strada_percorsa++;
+    tempo_in_strada = tempo_in_strada + time_struct.tv_nsec;
+    P(taxi_statistiche -> mutex);
+   	if(strada_percorsa > taxi_statistiche -> strada_fatta) {
+   		taxi_statistiche -> pid_strada_fatta = getpid();
+   		taxi_statistiche -> strada_fatta = strada_percorsa;
+   	}
+   	if(tempo_in_strada > taxi_statistiche -> tempo_in_strada) {
+   		taxi_statistiche -> pid_tempo_in_strada = getpid();
+   		taxi_statistiche -> tempo_in_strada = tempo_in_strada;
+   	}
+    V(taxi_statistiche -> mutex);
     nanosleep(&time_struct, NULL);
 }
 
@@ -323,6 +354,20 @@ void moveDown(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
+	
+
+    strada_percorsa++;
+    tempo_in_strada = tempo_in_strada + time_struct.tv_nsec;
+    P(taxi_statistiche -> mutex);
+   	if(strada_percorsa > taxi_statistiche -> strada_fatta) {
+   		taxi_statistiche -> pid_strada_fatta = getpid();
+   		taxi_statistiche -> strada_fatta = strada_percorsa;
+   	}
+   	if(tempo_in_strada > taxi_statistiche -> tempo_in_strada) {
+   		taxi_statistiche -> pid_tempo_in_strada = getpid();
+   		taxi_statistiche -> tempo_in_strada = tempo_in_strada;
+   	}
+    V(taxi_statistiche -> mutex);
     nanosleep(&time_struct, NULL);
 }
 
@@ -371,6 +416,20 @@ void moveLeft(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
+
+	
+	strada_percorsa++;
+    tempo_in_strada = tempo_in_strada + time_struct.tv_nsec;
+    P(taxi_statistiche -> mutex);
+   	if(strada_percorsa > taxi_statistiche -> strada_fatta) {
+   		taxi_statistiche -> pid_strada_fatta = getpid();
+   		taxi_statistiche -> strada_fatta = strada_percorsa;
+   	}
+   	if(tempo_in_strada > taxi_statistiche -> tempo_in_strada) {
+   		taxi_statistiche -> pid_tempo_in_strada = getpid();
+   		taxi_statistiche -> tempo_in_strada = tempo_in_strada;
+   	}
+    V(taxi_statistiche -> mutex);
     nanosleep(&time_struct, NULL);    
 }
 
@@ -419,6 +478,19 @@ void moveRight(struct grigliaCitta * mappa) {
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex); /*Rilascio il mutex vecchio*/
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex); /*Rilascio il mutex nuovo*/
+
+	strada_percorsa++;
+    tempo_in_strada = tempo_in_strada + time_struct.tv_nsec;
+    P(taxi_statistiche -> mutex);
+   	if(strada_percorsa > taxi_statistiche -> strada_fatta) {
+   		taxi_statistiche -> pid_strada_fatta = getpid();
+   		taxi_statistiche -> strada_fatta = strada_percorsa;
+   	}
+   	if(tempo_in_strada > taxi_statistiche -> tempo_in_strada) {
+   		taxi_statistiche -> pid_tempo_in_strada = getpid();
+   		taxi_statistiche -> tempo_in_strada = tempo_in_strada;
+   	}
+    V(taxi_statistiche -> mutex);	
     nanosleep(&time_struct, NULL);
 }
 
