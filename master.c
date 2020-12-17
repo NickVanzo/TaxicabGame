@@ -97,6 +97,7 @@ int main(int argc, char * argv[]) {
     int taxiSemaphore_id;
     int trashKillSignal; /*variabile per raccogliere stato segnale uscita*/
     int wait_pid;
+    int child_status;
     boolean printWithAscii = FALSE; /*se lo schermo è piccolo stampo con ascii*/
     /*Variabili per memoria condivisa*/
     struct grigliaCitta * mappa;
@@ -205,10 +206,11 @@ int main(int argc, char * argv[]) {
     }
 
     while (!exitFromProgram) {
+
         sprintf(SO_DURATION_PARAM, "%d", SO_DURATION - runningTime);
 
         /*Se un taxi muore lo ricreiamo in un altra posizione della griglia*/
-        while((wait_pid = waitpid(-1, NULL, WNOHANG)) == -1) {
+        while((wait_pid = waitpid(-1, NULL, WNOHANG)) > 0) {
             for(i = 0; i < SO_TAXI; i++) {
                 if(taxiCreated[i] == wait_pid) {
                     taxiCreated[i] = fork();
@@ -228,6 +230,8 @@ int main(int argc, char * argv[]) {
                 }
             }
         }
+
+
 
         aggiornaStatistiche(mappa, mapStats, queue_id);
 
@@ -564,9 +568,7 @@ void stampaStatistiche(struct grigliaCitta * mappa, int * statistiche, boolean f
         for (j = 0; j < SO_WIDTH; j++) {
 
 	           
-              P(mappa->matrice[i][j].mutex);
               sprintf(strTmp, " %-5d ", mappa -> matrice[i][j].taxiOnThisCell); /*preparo la stringa da stampare nella cella*/
-              V(mappa->matrice[i][j].mutex);
 
 
             if (mappa -> matrice[i][j].cellType == ROAD) {

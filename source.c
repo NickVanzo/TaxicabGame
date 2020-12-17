@@ -10,7 +10,6 @@ void signalHandler(int signal);
 int exitFromLoop = 0;
 
 int main(int argc,  char * argv[]){
-    fprintf(stdout, "IL MIO PID: %d\n", getpid());
     if(argc != 4){
         printf("Error parametrs not matching!\n");
         exit(EXIT_FAILURE);
@@ -55,7 +54,7 @@ int main(int argc,  char * argv[]){
     signal(SIGUSR1, signalHandler);
 
     while(exitFromLoop == 0){
-        alarm((rand() % (SO_DURATION/40))+1);  
+        alarm(1);  
         pause();
     }
     
@@ -71,12 +70,16 @@ void signalHandler(int signal){
             do{
                 myMessage.xDest = rand()%SO_HEIGHT;
                 myMessage.yDest = rand()%SO_WIDTH;
-            }while(mappa->matrice[myMessage.xDest][myMessage.yDest].cellType != ROAD);
+            }while(mappa->matrice[myMessage.xDest][myMessage.yDest].cellType == BLOCK);
                 
 
-            if(msgsnd(queueId, &myMessage, 2*sizeof(int), 0) == -1){
-                write(1,"Error sending message!\n", strlen("Error sending message!\n"));
-            }
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+            msgsnd(queueId, &myMessage, 2*sizeof(int), 0);
+               
             break;
         default:
             break;

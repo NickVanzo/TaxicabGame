@@ -83,8 +83,8 @@
     #define DEFINES
 
     /*dimensione della mappa del mondo*/
-    #define SO_WIDTH 10 /*righe*/
-    #define SO_HEIGHT 20 /*colonne*/
+    #define SO_WIDTH 60 /*colonne*/
+    #define SO_HEIGHT 20 /*righe*/
 #endif
 
 #ifndef COLORS_SCHEME

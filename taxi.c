@@ -148,7 +148,6 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id) {
         posizioneTaxi.posC = rand() % SO_WIDTH;
         availableSpaceOnCell = semctl(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace, 0, GETVAL);
     } while (availableSpaceOnCell == 0 && (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].cellType != BLOCK));
-
     P(taxiSemaphore_id); /*Abbasso il valore di aspettaTutti cosi nel main è 0*/
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     /*Abbasso di uno il valore del semaforo availableSpace*/
@@ -441,8 +440,8 @@ void closestSource(struct grigliaCitta * mappa) {
     int positionOfMinDistance = 0, tmp;
 
     if (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].cellType == SOURCE) {
-        posizioneTaxi.destR = i;
-        posizioneTaxi.destC = j;
+        posizioneTaxi.destR = posizioneTaxi.posR;
+        posizioneTaxi.destC = posizioneTaxi.posC;
         return;
     }
 

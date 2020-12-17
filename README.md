@@ -40,5 +40,9 @@ programma che mette roba dentro la coda di messaggi per nuove richieste
 generazione random di: source e buchi
 default mappa: strada
 modifica dopo creazione
+Parametri OK:
+./master 1000 190 10 1 100 800000000 900090000 40 1000 5
+
+./master 100 190 10 1 100 800000000 900090000 40 1000 20
 
 
