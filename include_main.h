@@ -1,106 +1,106 @@
 
 #define _GNU_SOURCE
 
-# ifndef INCLUDE_STDIO
+#ifndef INCLUDE_STDIO
 #define INCLUDE_STDIO
 #include <stdio.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_STDLIB
+#ifndef INCLUDE_STDLIB
 #define INCLUDE_STDLIB
 #include <stdlib.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_TIME
+#ifndef INCLUDE_TIME
 #define INCLUDE_TIME
 #include <time.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_STRINGS
+#ifndef INCLUDE_STRINGS
 #define INCLUDE_STRINGS
 #include <string.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_UNISTD
+#ifndef INCLUDE_UNISTD
 #define INCLUDE_UNISTD
 #include <unistd.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_SIGNAL
+#ifndef INCLUDE_SIGNAL
 #define INCLUDE_SIGNAL
 #include <signal.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_TYPES
+#ifndef INCLUDE_TYPES
 #define INCLUDE_TYPES
 #include <sys/types.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_IPC
+#ifndef INCLUDE_IPC
 #define INCLUDE_IPC
 #include <sys/ipc.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_SEM
+#ifndef INCLUDE_SEM
 #define INCLUDE_SEM
 #include <sys/sem.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_LIMITS
+#ifndef INCLUDE_LIMITS
 #define INCLUDE_LIMITS
 #include <limits.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_ERRNO
+#ifndef INCLUDE_ERRNO
 #define INCLUDE_ERRNO
 #include <errno.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_SHM
+#ifndef INCLUDE_SHM
 #define INCLUDE_SHM
 #include <sys/shm.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_IOCTL /*vedi pg 711 di advanced programming for unix enviroment*/ 
+#ifndef INCLUDE_IOCTL /*vedi pg 711 di advanced programming for unix enviroment*/ 
 #define INCLUDE_IOCTL
 #include <sys/ioctl.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_MSG
+#ifndef INCLUDE_MSG
 #define INCLUDE_MSG
 #include <sys/msg.h>
 
-# endif
+#endif
 
-# ifndef INCLUDE_MATH
+#ifndef INCLUDE_MATH
 #define INCLUDE_MATH
 #include <math.h>
 
-# endif
+#endif
 
-# ifndef DEFINES
+#ifndef DEFINES
 #define DEFINES
-
 /*dimensione della mappa*/
 /*colonne*/
 #define SO_WIDTH 20
 /*righe*/
-#define SO_HEIGHT 10# endif
+#define SO_HEIGHT 10
+#endif
 
-# ifndef COLORS_SCHEME
+#ifndef COLORS_SCHEME
 #define COLORS_SCHEME
 #define C_DEFAULT "\033[39m"
 #define C_BLACK "\033[30m"
@@ -121,8 +121,8 @@
 #define BG_C_MAGENTA "\033[45m"
 #define BG_C_CYAN "\033[46m"
 #define BG_C_GRAY "\033[100m"
-#define BG_C_WHITE "\033[107m"#
-endif
+#define BG_C_WHITE "\033[107m"
+#endif
 
 /*
     Struct di supporto implementata da noi per utilizzare booleani.
@@ -235,8 +235,7 @@ struct taxiStatistiche
     int mutex;
 };
 
-#
-ifndef DEFINE_CUSTOM_FUNCTIONS
+#ifndef DEFINE_CUSTOM_FUNCTIONS
 #define DEFINE_CUSTOM_FUNCTIONS
 /*qua dentro definiamo tutti i prototipi delle funzioni che andiamo a scrivere*/
 
@@ -248,5 +247,5 @@ void colorPrintf(char *message, enum color colore, enum color bgcolore);
 */
 void P(int semaphore);
 void V(int semaphore);
-void VwaitForZero(int semaphore);#
-endif
+void VwaitForZero(int semaphore);
+#endif
