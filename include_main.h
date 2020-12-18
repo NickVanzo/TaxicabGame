@@ -148,7 +148,7 @@ typedef struct{
 } map_cell;
 
 /*struttura per invvio messaggi contentente richiesta di corsa a un taxi*/
-struct msgBuf{
+struct msgBuf {
     long mtype; /*se mtype = 0 kill di chi lo legge, se mtype = 1...n richiedere corsa a source 1...n*/
     int xDest;
     int yDest;
@@ -191,6 +191,5 @@ struct taxiStatistiche {
     */
     void P(int semaphore);
     void V(int semaphore);
-
-
+    void VwaitForZero(int semaphore);
 #endif

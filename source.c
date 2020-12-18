@@ -16,7 +16,7 @@ int shm_key, shm_id;
 int exit_from_loop = 0;
 
 /*
-    Dichiarazione struct.
+    Dichiarazione structs.
     my_message viene usata per costruire il corpo del messaggio da mandare nella coda di messaggi.
     mappa viene usata per eseguire l'attach alla memoria condivisa che contiene la mappa creata dal processo master.
 */
@@ -105,12 +105,11 @@ int main(int argc, char *argv[])
     */
     while (exit_from_loop == 0)
     {
-        alarm((rand() % 5) + 1);
+        alarm(rand() % 5 / SO_SOURCE + 1);
         pause();
     }
     /*
         Eseguo il detach dalla memoria condivisa
-        E la coda di messaggi ??????????????????????????????
     */
     shmdt(mappa);
     exit(EXIT_SUCCESS);
@@ -127,7 +126,8 @@ void signalHandler(int signal)
                 La destinazione può essere una cella di tipo ROAD o una cella di tipo SOURCE. NON UNA BLOCK.
             */
             my_message.mtype = (rand() % SO_SOURCE) + 1;
-            do {    my_message.xDest = rand() % SO_HEIGHT;
+            do {    
+                my_message.xDest = rand() % SO_HEIGHT;
                 my_message.yDest = rand() % SO_WIDTH;
             } while (mappa->matrice[my_message.xDest][my_message.yDest].cellType == BLOCK);
 
@@ -135,7 +135,9 @@ void signalHandler(int signal)
                 Mando il messaggio nella coda di messaggi con il corpo impostato con valori generati qui sopra.
             */
             msgsnd(queue_id, &my_message, 2* sizeof(int), 0);
-            msgsnd(queue_id, &my_message, 2* sizeof(int), 0);
+            break;
+        case SIGINT:
+            exit_from_loop = 1;
             break;
         default:
             break;

@@ -1,30 +1,30 @@
 #include "include_main.h"
 
 /*
-	Questa funzione spawna una taxi in una posizione casuale della mappa facendo attenzione che la posizione casuale risponda ai seguenti criteri:
+	La funzione "spawnTaxi" crea un taxi in una posizione casuale della mappa facendo attenzione che la posizione casuale risponda ai seguenti criteri:
 	1 - ci deve essere spazio per ospitare il taxi
-	2 - la cella selezionata deve essere di tipo ROAD
+	2 - la cella selezionata deve essere di tipo ROAD o SOURCE
 */
 void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id);
 
 /*
-    funzione che restituisce la so_source piu vicina date le coordinate taxiX e taxiY. 
+    La funzione "closestSource" restituisce la so_source piu vicina date le coordinate taxiX e taxiY. 
     le coordinate della dest piu vicina sono dentro  destX e desY.
 */
 
 void closestSource(struct grigliaCitta * mappa);
 
 /*
-    questa funzione permette di ottenere il tipo di messaggio su cui mettersi in ascolto, data la posizione del taxi
+    La funzione "enumSoSources" permette di ottenere il tipo di messaggio su cui mettersi in ascolto, data la posizione del taxi
     il tipo di messaggio corrsiponde al numero in cui compare la SO_SOURCE con una letttura sequenziale della mappa
-    ovvero per esempio se ho una so source in 0,0 e una in 0,3 , la prima avrà mtype = 1  e la seconda avrà mtype=2 e così via...
+    ovvero per esempio se ho una so source in 0,0 e una in 0,3 senza altre source nelle coordiante intermedie, la prima avrà mtype = 1  e la seconda avrà mtype=2 e così via...
     la funzione ritorna -1 in caso di errore
 */
 int enumSoSources(struct grigliaCitta *mappa);
 
 /*
-	Questa funzione permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
-	Ritorna il punto di arrivo
+	La fuzione move permette al taxi di muoversi verso la sua destinazione, sia SO_SOURCE che destinazione prelevata dal messaggio
+	move fa uso di funzioni di appoggio, ossia: moveUp, moveDown, moveLeft, moveRight. Le quali permettono di muoversi verso la direzione precisata nel nome della funzione.
 */
 void move(struct grigliaCitta * mappa);
 void moveUp(struct grigliaCitta * mappa);
@@ -38,10 +38,22 @@ void moveRight(struct grigliaCitta * mappa);
 */
 void getRide(int msg_queue_id, long so_source);
 
+/*
+	La funzione signalHandler gestisce il sengale che indica al processo di fermare l'esecuzione e procedere con la disallocazione degli IPCS.
+*/
 void signalHandler(int signalNo);
 
+/*
+	La struttura "taxi_statistiche" viene caricata in memoria condivisa dal master e viene utilizzata dai taxi per permettere al master di stampare il pid del taxi con le caratteristiche richieste.
+	Ogni volta che un taxi esegue uno spostamento aggiorna le variabili presenti nella sua struct e le confronta con quelle presenti in memoria condivisa, effettuando le dovute sostituzioni
+	qualora le variabili del taxi che sta controllando la struct siano minori delle sue caratteristiche, così il master può eseguire la stampa del pid del taxi corretto.
+*/
 struct taxiStatistiche * taxi_statistiche;
 
+/*
+	La funzione "Ptemp" è una funzione usata solamente da taxi.c e serve per attendere l'accesso alle risorse della mappa e rilasciare le proprie nel caso in cui il valore di timeout giunge a 0.
+	I parametri accettati dalla funzione sono: l'id del semaforo su cui esegurie l'operazione specifica e il tempo che deve passare affinchè il taxi cessi di aspettare le risorse e rilasci le sue.
+*/
 int Ptemp(int semaphore, long time) {
 	struct timespec timeout_taxi;
 	struct sembuf sops;
@@ -53,7 +65,15 @@ int Ptemp(int semaphore, long time) {
  	return semtimedop(semaphore, &sops, 1, &timeout_taxi);
 }
 
-/*Variabili e struct*/
+/*
+	Dichiarazione variabili e struct globali
+
+	La struct _posTaxi viene usata per ottenere informazioni sulla posizione del taxi nella mappa.
+	La variabile intera posR indica la posizione effettiva del taxi sulle x. (R sta per riga)
+	La variabile intera posC indica la posizione effettiva del taxi sulle y. (C sta per colonna)
+	La variabile intera desR indica la posizione verso cui si deve dirigere il taxi. (Sulle x)
+	La variabile intera desC indica la posizione verso cui si deve dirigere il taxi. (Sulle y)
+*/
 struct _posTaxi {
     int posR;
     int posC;
@@ -157,7 +177,9 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id) {
         posizioneTaxi.posC = rand() % SO_WIDTH;
         availableSpaceOnCell = semctl(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace, 0, GETVAL);
     } while (availableSpaceOnCell == 0 && (mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].cellType != BLOCK));
-    P(taxiSemaphore_id); /*Abbasso il valore di aspettaTutti cosi nel main è 0*/
+    if(semctl(taxiSemaphore_id, 0, GETVAL) > 0) {
+    	P(taxiSemaphore_id); /*Abbasso il valore di aspettaTutti cosi nel main è 0*/
+    }
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     /*Abbasso di uno il valore del semaforo availableSpace*/
     P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace);
@@ -168,7 +190,7 @@ void spawnTaxi(struct grigliaCitta * mappa, int taxiSemaphore_id) {
     /*Uscita sezione critica rilasciando la risorsa*/
 
     V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
-    V(taxiSemaphore_id);
+    VwaitForZero(taxiSemaphore_id);
 }
 
 
@@ -254,7 +276,9 @@ void moveUp(struct grigliaCitta * mappa) {
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
     	/*Il semaforo non è riuscito ad ottenere il semaforo, aumento corse abortite e rilascio eventuali risorse ottenute*/
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -264,8 +288,9 @@ void moveUp(struct grigliaCitta * mappa) {
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
 	    P(mappa -> mutex);
-    	mappa -> aborted_rides++;
-    	V(mappa -> mutex);
+		if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}    	V(mappa -> mutex);
 	    V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
 	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -275,7 +300,9 @@ void moveUp(struct grigliaCitta * mappa) {
     } 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	V(mappa -> matrice[posizioneTaxi.posR - 1][posizioneTaxi.posC].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR -1][posizioneTaxi.posC].mutex);
@@ -320,7 +347,9 @@ void moveDown(struct grigliaCitta * mappa) {
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -331,7 +360,9 @@ void moveDown(struct grigliaCitta * mappa) {
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
 	    P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
@@ -343,7 +374,9 @@ void moveDown(struct grigliaCitta * mappa) {
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
 	    P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
 	    V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].availableSpace);
 	    V(mappa -> matrice[posizioneTaxi.posR + 1][posizioneTaxi.posC].mutex); /*Rilascio il mutex vecchio*/
@@ -388,7 +421,9 @@ void moveLeft(struct grigliaCitta * mappa) {
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -398,7 +433,9 @@ void moveLeft(struct grigliaCitta * mappa) {
     } 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
@@ -409,7 +446,9 @@ void moveLeft(struct grigliaCitta * mappa) {
     } /*Ottengo il mutex dove vado*/
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
 		P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
 		V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].availableSpace);
 		V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC - 1].mutex);
@@ -454,7 +493,9 @@ void moveRight(struct grigliaCitta * mappa) {
     time_struct.tv_nsec = mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].timeRequiredToCrossCell; 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
     	mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].taxiOnThisCell--;
@@ -465,7 +506,9 @@ void moveRight(struct grigliaCitta * mappa) {
     }
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     	P(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
@@ -477,7 +520,9 @@ void moveRight(struct grigliaCitta * mappa) {
     } 
     if(Ptemp(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].mutex, so_timeout) == -1 && errno == EAGAIN) {
     	P(mappa -> mutex);
-    	mappa -> aborted_rides++;
+    	if(ride_taken == TRUE) {
+    		mappa -> aborted_rides++;
+    	}
     	V(mappa -> mutex);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC + 1].availableSpace);
     	V(mappa -> matrice[posizioneTaxi.posR][posizioneTaxi.posC].mutex);
