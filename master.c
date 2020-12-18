@@ -639,7 +639,7 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
 
     for (i = 0; i < SO_HEIGHT; i++, row_count++)/*stampo il corpo della mappa*/
     {
-        sprintf(strTmp, "%4d", i);
+        sprintf(strTmp, "%3d ", i);
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
         for (j = 0; j < SO_WIDTH; j++)
         {
