@@ -73,7 +73,7 @@
 
 #endif
 
-#ifndef INCLUDE_IOCTL /*vedi pg 711 di advanced programming for unix enviroment*/ 
+#ifndef INCLUDE_IOCTL /*vedi pg 87 e 711 di advanced programming in the unix enviroment 3 edizione*/ 
 #define INCLUDE_IOCTL
 #include <sys/ioctl.h>
 
