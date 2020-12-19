@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, signalHandler);
 
     /*
-        Eseguo un loop che continua fino a quando la variabile exit_from_loop viene settata ad 1 da ?????????????????????????????
+        Eseguo un loop che continua fino a quando la variabile exit_from_loop viene settata ad 1 sall'handler se riceve SIGIN
     */
     while (exit_from_loop == 0)
     {
