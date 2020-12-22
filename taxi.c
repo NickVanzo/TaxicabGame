@@ -106,9 +106,13 @@ int main(int argc, char *argv[])
 	int queue_key, queue_id;
 	/*Variabile per ottenere la durata della simulazione*/
 	int time_duration;
+	struct sigaction sa;
 	srand(getpid());
 	/*Imposto l'handler del segnale SIGARLM con il mio handler personalizzato*/
-	signal(SIGALRM, signalHandler);
+	bzero(&sa, sizeof(sa));
+	sa.sa_handler = signalHandler;
+	sigaction(SIGALRM, &sa, NULL);
+	
 	exit_program = FALSE;
 	ride_taken = FALSE;
 
