@@ -510,11 +510,11 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
             printf("Insert number of holes available for the simulation: ");
             fgets(buffer_temp, 20, stdin); 
             *SO_HOLES = abs(atoi(buffer_temp)); 
-            if (*SO_HOLES >= (SO_WIDTH *SO_HEIGHT - *SO_SOURCES))
+            if (*SO_HOLES > (SO_WIDTH *SO_HEIGHT - *SO_SOURCES))
             {
                 colorPrintf("Insert again the number of HOLES. Too many holes.\n", RED, DEFAULT);
             }
-        } while (*SO_HOLES >= (SO_WIDTH *SO_HEIGHT - *SO_SOURCES));
+        } while (*SO_HOLES > (SO_WIDTH *SO_HEIGHT - *SO_SOURCES));
 
         printf("Insert minimum capacity for each cell: ");
         fgets(buffer_temp, 20, stdin);
