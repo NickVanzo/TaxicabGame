@@ -33,6 +33,7 @@ void signalHandler(int signal);
 
 int main(int argc, char *argv[])
 {
+    struct sigaction sa;
     /*
         Controllo che il numero di parametri ricevuto dal source.c sia corretto.
     */
@@ -97,9 +98,12 @@ int main(int argc, char *argv[])
         Imposto l'handler di SIGALRM. 
         Si potrebbe fare con la sigaction ma in questo modo il procedimento è meno macchinoso.
     */
-    signal(SIGALRM, signalHandler);
-    signal(SIGUSR1, signalHandler);
+    bzero(&sa, sizeof(sa));
 
+    sa.sa_handler = signalHandler;
+
+    sigaction(SIGALRM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
     /*
         Eseguo un loop che continua fino a quando la variabile exit_from_loop viene settata ad 1 sall'handler se riceve SIGIN
     */

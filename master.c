@@ -122,6 +122,7 @@ int main(int argc, char *argv[])
 
     int wait_pid; /*variabile usata per capire se un taxi è morto, e nel caso ricrearlo*/
 
+    struct sigaction sa;
     
     boolean print_with_ascii = FALSE; /*variabile usata per capire se devo stampare con una modalità più compatta o meno*/
 
@@ -131,6 +132,10 @@ int main(int argc, char *argv[])
     /*
         --INIZIO ESECUZIONE MAIN--
     */
+    /*Impostazione dell'handler di sigalrm*/
+    bzero(&sa, sizeof(sa));
+    sa.sa_handler = signalHandler;
+    sigaction(SIGALRM, &sa, NULL);
      
     checkForDegeneresMap(); /*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2. SE NON è IL CASO TERMINO ESECUZIONE*/
 

@@ -46,9 +46,13 @@ Parametri OK:
 ./master 100 190 10 1 100 800000000 900090000 40 1000 20
 
 Parametri dense
-./master 95 190 10 3 5 100000000 300000000 40 1000 20
+	
 
 Domanda da fare a Bini:
 
 III) le SO_TOP_CELLS devono includere le SO_SOURCES oppure devono essere solamente celle di tipo ROAD?
+Risposta in generale.
 IV) signal al posto di sigaction per impostare l'handler dei segnali in source.c?
+Usare la sigaction
+V) Quando bisogna consegnare il progetto entrambi gli studenti devono consegnarlo nel google form? (nel caso di studenti di turni diversi)
+Fa tutto la google form. Risposta in generale.
