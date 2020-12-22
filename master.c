@@ -181,10 +181,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-  
-
-
-    signal(SIGALRM, signalHandler);    /*Imposto handler del timer per la fine del programma*/
 
     srand(getpid()); /*init della rand per la funzione di assegnazione*/
 
