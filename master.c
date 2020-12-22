@@ -660,7 +660,14 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
             }
             else if (mappa->matrice[i][j].cellType == SOURCE)
             {
-                colorPrintf(strTmp, BLACK, MAGENTA);
+                if ((final_print == TRUE) && (mappa->matrice[i][j].isInTopSoCell == TRUE))
+                {
+                    colorPrintf(strTmp, MAGENTA, YELLOW);
+                } 
+                else
+                {
+                    colorPrintf(strTmp, BLACK, MAGENTA);
+                } 
             }
             else /*se è una strada di tipo block*/
             {
@@ -777,7 +784,14 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
             }
             else if (mappa->matrice[i][j].cellType == SOURCE)
             {
-                colorPrintf(strTmp, BLACK, MAGENTA);
+                if ((final_print == TRUE) && (mappa->matrice[i][j].isInTopSoCell == TRUE))
+                {
+                    colorPrintf(strTmp, MAGENTA, YELLOW);
+                } /*se sono alla stampa finale, mostro la most frquented cell...*/
+                else
+                {
+                    colorPrintf(strTmp, BLACK, MAGENTA);
+                } 
             }
             else
             {
@@ -845,7 +859,7 @@ void searchForTopCells(struct grigliaCitta *mappa, int SO_TOP_CELL)
         {
             for (j = 0; j < SO_WIDTH; j++)
             {
-                if ((mappa->matrice[i][j].cellType == ROAD) && (mappa->matrice[i][j].isInTopSoCell == FALSE) && (mappa->matrice[i][j].totalNumberOfTaxiPassedHere > max_value)) /*se la cella ha un numero di taxi passato maggiore e se è di tipo road e se non è già marcata come top allora salvo le sue coordinate*/
+                if ((mappa->matrice[i][j].cellType != BLOCK) && (mappa->matrice[i][j].isInTopSoCell == FALSE) && (mappa->matrice[i][j].totalNumberOfTaxiPassedHere > max_value)) /*se la cella ha un numero di taxi passato maggiore e se è di tipo road e se non è già marcata come top allora salvo le sue coordinate*/
                 {
                     max_value = mappa->matrice[i][j].totalNumberOfTaxiPassedHere;
                     max_i = i;
