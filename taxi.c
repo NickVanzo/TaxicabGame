@@ -47,7 +47,7 @@ void signalHandler(int signalNo);
 	Ogni volta che un taxi esegue uno spostamento aggiorna le variabili presenti nella sua struct e le confronta con quelle presenti in memoria condivisa, effettuando le dovute sostituzioni
 	qualora le variabili del taxi che sta controllando la struct siano minori delle sue caratteristiche, così il master può eseguire la stampa del pid del taxi corretto.
 */
-struct taxiStatistiche * taxi_statistiche;
+struct taxiStatistiche *taxi_statistiche;
 
 /*
 	La funzione "Ptemp" è una funzione usata solamente da taxi.c e serve per attendere l'accesso alle risorse della mappa e rilasciare le proprie quando il il tempo della simulazione scade.
@@ -57,12 +57,25 @@ int Ptemp(int semaphore, long time)
 {
 	struct timespec timeout_taxi;
 	struct sembuf sops;
+
+	#ifdef __APPLE__
+		int returnValue = -1;
+	#endif
+
 	sops.sem_flg = 0;
 	sops.sem_num = 0;
 	sops.sem_op = -1;
 	timeout_taxi.tv_sec = 0;
 	timeout_taxi.tv_nsec = time;
-	return semtimedop(semaphore, &sops, 1, &timeout_taxi);
+
+	/*Required 'cos apple dont give a fuck about semtimedop -.- thanks a lot apple...*/
+	#ifdef __APPLE__
+		ualarm(timeout_taxi.tv_nsec*1000, 1);
+		returnValue = semop(semaphore, &sops, 1);
+		return returnValue;
+	#else
+		return semtimedop(semaphore, &sops, 1, &timeout_taxi);
+	#endif
 }
 
 /*
@@ -80,8 +93,7 @@ struct _posTaxi
 	int posC;
 	int destR;
 	int destC;
-}
-posizioneTaxi;
+} posizioneTaxi;
 
 /*variabili riguardanti la gestione dei tempi necessari ai taxi per lo spostamento e per il rilascio di risorse*/
 int so_timeout;
@@ -99,7 +111,7 @@ boolean ride_taken;
 int main(int argc, char *argv[])
 {
 	/*Variabili per la memoria condivisa della mappa, dei taxi (per ottenere il semaforo usato per aspettare che tutti vengano posizionati) e delle statistiche da confrontare*/
-	struct grigliaCitta * mappa;
+	struct grigliaCitta *mappa;
 	int shm_Key, shm_id, shmId_ForTaxi, shmKey_ForTaxi, shmKey_stats, shmID_stats;
 	int taxiSemaphore_id;
 	/*Variabili per la coda di messaggi*/
@@ -112,7 +124,7 @@ int main(int argc, char *argv[])
 	bzero(&sa, sizeof(sa));
 	sa.sa_handler = signalHandler;
 	sigaction(SIGALRM, &sa, NULL);
-	
+
 	exit_program = FALSE;
 	ride_taken = FALSE;
 
@@ -179,7 +191,7 @@ int main(int argc, char *argv[])
 	{
 		closestSource(mappa);
 		move(mappa);
-		getRide(queue_id, (long) enumSoSources(mappa));
+		getRide(queue_id, (long)enumSoSources(mappa));
 		move(mappa);
 	}
 
@@ -194,7 +206,8 @@ void spawnTaxi(struct grigliaCitta *mappa, int taxiSemaphore_id)
 	int availableSpaceOnCell;
 	int i = 0, j = 0;
 	/*Seleziono un punto casuale della mappa in cui spawnare, se il massimo di taxi in quella cella è stato raggiunto o la cella ha tipo BLOCK cambio cella*/
-	do {
+	do
+	{
 		posizioneTaxi.posR = rand() % SO_HEIGHT;
 		posizioneTaxi.posC = rand() % SO_WIDTH;
 		availableSpaceOnCell = semctl(mappa->matrice[posizioneTaxi.posR][posizioneTaxi.posC].availableSpace, 0, GETVAL);
@@ -692,9 +705,9 @@ void signalHandler(int signalNo)
 {
 	switch (signalNo)
 	{
-		case SIGALRM:
-			exit_program = TRUE;
-			break;
+	case SIGALRM:
+		exit_program = TRUE;
+		break;
 	}
 }
 
@@ -722,7 +735,7 @@ void closestSource(struct grigliaCitta *mappa)
 		{
 			if (mappa->matrice[i][j].cellType == SOURCE)
 			{
-				tmp = (int) sqrt(pow(posizioneTaxi.posR - i, 2) + pow(posizioneTaxi.posC - j, 2));
+				tmp = (int)sqrt(pow(posizioneTaxi.posR - i, 2) + pow(posizioneTaxi.posC - j, 2));
 				if (tmp < minDistance)
 				{
 					minDistance = tmp;
@@ -751,7 +764,8 @@ int enumSoSources(struct grigliaCitta *mappa)
 			if (mappa->matrice[i][j].cellType == SOURCE)
 			{
 				count_source++;
-				if (i == posizioneTaxi.posR && j == posizioneTaxi.posC) return count_source;
+				if (i == posizioneTaxi.posR && j == posizioneTaxi.posC)
+					return count_source;
 			}
 		}
 	}
@@ -765,7 +779,7 @@ int enumSoSources(struct grigliaCitta *mappa)
 void getRide(int msg_queue_id, long so_source)
 {
 	struct msgBuf myMessage;
-	if (msgrcv(msg_queue_id, &myMessage, 2* sizeof(int), so_source, 0) == -1)
+	if (msgrcv(msg_queue_id, &myMessage, 2 * sizeof(int), so_source, 0) == -1)
 	{
 		exit(EXIT_FAILURE);
 	}
