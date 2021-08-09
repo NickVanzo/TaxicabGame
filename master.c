@@ -1,6 +1,5 @@
 #include "include_main.h"
 
-
 /*
     funzione per la stampa in master delle statistiche della cella
     map_cell mappa[][] la mappa del gioco
@@ -75,7 +74,6 @@ void checkForDegeneresMap();
 */
 void searchForTopCells(struct grigliaCitta *mappa, int SO_TOP_CELL);
 
-
 /*
     questa funzione procde a fare l'inizializzazione dei parametri delle celle della mappa,
     andando a impostare i valori casuali di SO_CAP e SO_TIMENSEC.
@@ -85,16 +83,14 @@ void searchForTopCells(struct grigliaCitta *mappa, int SO_TOP_CELL);
 */
 void initMap(struct grigliaCitta *mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_TIMENSEC_MIN, int SO_TIMENSEC_MAX, int SO_HOLES, int SO_SOURCES);
 
-
 /*
     funzione per gestire eventuali segnali guinti al processo
 */
 void signalHandler(int signal);
 
-
 boolean exit_from_program;
 
-struct taxiStatistiche * taxi_statistiche;
+struct taxiStatistiche *taxi_statistiche;
 
 int main(int argc, char *argv[])
 {
@@ -112,7 +108,7 @@ int main(int argc, char *argv[])
     int *child_taxi_created;
 
     /*variabili per la conversione dei parametri letti a tempo di esecuzione in stringhe per poterli passare ai figli*/
-    char  SO_SOURCES_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
+    char SO_SOURCES_PARAM[10], SO_TIMEOUT_PARAM[10], SO_DURATION_PARAM[10];
 
     int running_time = 0; /*variabile che indica il tempo in secondi di esecuzione. utile per distinguere le il processo master è bloccato o sta continuando l'esecuzione*/
 
@@ -123,11 +119,10 @@ int main(int argc, char *argv[])
     int wait_pid; /*variabile usata per capire se un taxi è morto, e nel caso ricrearlo*/
 
     struct sigaction sa;
-    
+
     boolean print_with_ascii = FALSE; /*variabile usata per capire se devo stampare con una modalità più compatta o meno*/
 
- 
-    struct grigliaCitta * mappa; /*struct contenente la mappa della città*/
+    struct grigliaCitta *mappa; /*struct contenente la mappa della città*/
 
     /*
         --INIZIO ESECUZIONE MAIN--
@@ -136,24 +131,22 @@ int main(int argc, char *argv[])
     bzero(&sa, sizeof(sa));
     sa.sa_handler = signalHandler;
     sigaction(SIGALRM, &sa, NULL);
-     
+
     checkForDegeneresMap(); /*controllo che la mappa non sia degenere ovvero che tutti i punti possano essere raggiunti -> mappa deve essere almeno 2x2. SE NON è IL CASO TERMINO ESECUZIONE*/
 
-   
-    setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, &SO_TOP_CELLS, &SO_TIMEOUT, &SO_DURATION, argc, argv, &print_with_ascii);  /*AVVIO SETUP SIMULAZIONE*/
+    setupSimulation(&SO_TAXI, &SO_SOURCES, &SO_HOLES, &SO_CAP_MIN, &SO_CAP_MAX, &SO_TIMENSEC_MIN, &SO_TIMENSEC_MAX, &SO_TOP_CELLS, &SO_TIMEOUT, &SO_DURATION, argc, argv, &print_with_ascii); /*AVVIO SETUP SIMULAZIONE*/
 
     /*
         --CREAZIONE RISORSE CONDIVISE--
     */
 
     /*Coda di messaggi contenente le richieste di trasporto per i taxi*/
-    queue_key = ftok("ipcKey.key", 1);/*Ottengo la chiave per la coda di messaggi*/
-    if ((queue_id = msgget(queue_key, IPC_CREAT | IPC_EXCL | 0666)) == -1)/*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
+    queue_key = ftok("ipcKey.key", 1);                                     /*Ottengo la chiave per la coda di messaggi*/
+    if ((queue_id = msgget(queue_key, IPC_CREAT | IPC_EXCL | 0666)) == -1) /*Ottengo l'id della coda di messaggi cosi' da disallocare in seguito la coda*/
     {
         fprintf(stderr, "Errore nella creazione della coda di messaggi. Codice errore: %d (%s)", errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
-    
 
     /*Creazione memoria condivisa contenente la mappa con relativi controlli sulla mappa*/
     shm_key = ftok("ipcKey.key", 2);
@@ -167,12 +160,11 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-
     /*Creazione memoria condivisa per le statistiche dei taxi*/
     shm_key_stats = ftok("ipcKey.key", 5);
     shm_id_stats = shmget(shm_key_stats, sizeof(struct taxiStatistiche), IPC_CREAT | IPC_EXCL | 0666);
     taxi_statistiche = shmat(shm_id_stats, NULL, 0);
-    if(taxi_statistiche == (struct taxiStatistiche *)(-1))
+    if (taxi_statistiche == (struct taxiStatistiche *)(-1))
     {
         printf("Error at shmat! error code is %s", strerror(errno)); /*in caso di errore rilascio risorse precedenti ed esco dal programma*/
         msgctl(queue_id, IPC_RMID, NULL);
@@ -181,93 +173,89 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-
     srand(getpid()); /*init della rand per la funzione di assegnazione*/
 
-    for (i = 0; i < 6; i++) map_stats[i] = 0; /*init del vettore statistiche, in qunto non essendo globale ha valori casuali*/
+    for (i = 0; i < 6; i++)
+        map_stats[i] = 0; /*init del vettore statistiche, in qunto non essendo globale ha valori casuali*/
 
     initMap(mappa, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_HOLES, SO_SOURCES); /*init dei parametri delle celle della mappa e degli attributi condivisi della mappa*/
-
 
     /*
         --CREAZIONE FIGLI SOURCES--
     */
-    
+
     sprintf(SO_SOURCES_PARAM, "%d", SO_SOURCES); /*preparo i parametri da mandare come argomenti alla execlp*/
     sprintf(SO_DURATION_PARAM, "%d", SO_DURATION);
     sprintf(SO_TIMEOUT_PARAM, "%d", SO_TIMEOUT);
- 
-    child_source_created = malloc(SO_SOURCES* sizeof(int));    /*creo array contenente i pid dei figli source creati*/
-    
+
+    child_source_created = malloc(SO_SOURCES * sizeof(int)); /*creo array contenente i pid dei figli source creati*/
+
     for (i = 0; i < SO_SOURCES; i++) /*faccio la fork per poterer creare i processi che generano le richieste da  sources*/
     {
         child_source_created[i] = fork();
         switch (child_source_created[i])
         {
-            case -1:
-                printf("Error while trying to fork()! %s\n", strerror(errno)); /*in caso di errore esco disallocando le risorse condivise*/
-                msgctl(queue_id, IPC_RMID, NULL);
-                shmdt(mappa);
-                shmdt(taxi_statistiche);
-                shmctl(shm_id_stats, IPC_RMID, NULL);
-                shmctl(shm_id, IPC_RMID, NULL);
-                exit(EXIT_FAILURE);
-                break;
-            case 0:
-                /*cambio il programma in esecuzione*/
-                execlp("./source", "source", SO_SOURCES_PARAM, SO_DURATION_PARAM, SO_TIMEOUT_PARAM, NULL); /*se riesco avvio nuovo processo figlio, altrimenti esco deallocando le risorse condivise*/
-                printf("Error loading new program %s!\n\n", strerror(errno));
-                msgctl(queue_id, IPC_RMID, NULL);
-                shmdt(mappa);
-                shmdt(taxi_statistiche);
-                shmctl(shm_id_stats, IPC_RMID, NULL);
-                shmctl(shm_id, IPC_RMID, NULL);
-                exit(EXIT_FAILURE);
-                break;
-            default:
-                break;
+        case -1:
+            printf("Error while trying to fork()! %s\n", strerror(errno)); /*in caso di errore esco disallocando le risorse condivise*/
+            msgctl(queue_id, IPC_RMID, NULL);
+            shmdt(mappa);
+            shmdt(taxi_statistiche);
+            shmctl(shm_id_stats, IPC_RMID, NULL);
+            shmctl(shm_id, IPC_RMID, NULL);
+            exit(EXIT_FAILURE);
+            break;
+        case 0:
+            /*cambio il programma in esecuzione*/
+            execlp("./source", "source", SO_SOURCES_PARAM, SO_DURATION_PARAM, SO_TIMEOUT_PARAM, NULL); /*se riesco avvio nuovo processo figlio, altrimenti esco deallocando le risorse condivise*/
+            printf("Error loading new program %s!\n\n", strerror(errno));
+            msgctl(queue_id, IPC_RMID, NULL);
+            shmdt(mappa);
+            shmdt(taxi_statistiche);
+            shmctl(shm_id_stats, IPC_RMID, NULL);
+            shmctl(shm_id, IPC_RMID, NULL);
+            exit(EXIT_FAILURE);
+            break;
+        default:
+            break;
         }
     }
 
-  
     /*creazione di variabile semaforo per potere fare aspettare tutti i taxi prima che inizino la loro esecuzione*/
     shm_key_ForTaxi = ftok("ipcKey.key", 3);
     taxi_semaphore_id = semget(shm_key_ForTaxi, 1, IPC_CREAT | IPC_EXCL | 0666);
     semctl(taxi_semaphore_id, 0, SETVAL, SO_TAXI);
 
-    child_taxi_created = malloc(SO_TAXI* sizeof(int));     /*Creao un array contenente i pid dei figli taxi creati*/
+    child_taxi_created = malloc(SO_TAXI * sizeof(int)); /*Creao un array contenente i pid dei figli taxi creati*/
     for (i = 0; i < SO_TAXI; i++)
     {
         child_taxi_created[i] = fork();
         switch (child_taxi_created[i])
         {
-            case -1:
-                printf("Error while trying to fork()! %s\n", strerror(errno));
-                exit(EXIT_FAILURE);
-                break;
-            case 0:
-                execlp("./taxi", "taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
-                printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
-                exit(EXIT_FAILURE);
-                break;
-            default:
-                break;
+        case -1:
+            printf("Error while trying to fork()! %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+            break;
+        case 0:
+            execlp("./taxi", "taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+            printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
+            exit(EXIT_FAILURE);
+            break;
+        default:
+            break;
         }
     }
- 
 
-    
     exit_from_program = FALSE; /*fino a che questa variabile è falsa, continuo a rimanere nel programma. se diventa vera allora devo uscire dal loop principale e posso terminare l'esecuzione andando a disallocare le risorse codivise*/
-    
-    alarm(SO_DURATION);/*imposto durata simulazione*/
+
+    alarm(SO_DURATION); /*imposto durata simulazione*/
 
     while (!exit_from_program)
     {
 
         sprintf(SO_DURATION_PARAM, "%d", SO_DURATION - running_time); /*preparo un eventuale parametro, per nuovi taxi che devono essere ricreati, causa morte di altri taxi*/
 
-       /*Se un taxi muore lo ricreiamo in un altra posizione della griglia, andando a sostituire il pid del morto con quello dell'appena nato. So che non ho taxi morti se la waitpid mi ritorna 0. Inoltre la waitpid qua non è bloccante a causa del WNOHANG*/
-        while ((wait_pid = waitpid(-1, NULL, WNOHANG)) > 0)  
+        /*Se un taxi muore lo ricreiamo in un altra posizione della griglia, andando a sostituire il pid del morto con quello dell'appena nato. So che non ho taxi morti se la waitpid mi ritorna 0. Inoltre la waitpid qua non è bloccante a causa del WNOHANG*/
+        while ((wait_pid = waitpid(-1, NULL, WNOHANG)) > 0)
         {
             for (i = 0; i < SO_TAXI; i++)
             {
@@ -276,17 +264,17 @@ int main(int argc, char *argv[])
                     child_taxi_created[i] = fork();
                     switch (child_taxi_created[i])
                     {
-                        case -1:
-                            printf("Error while trying to fork()! %s\n", strerror(errno));
-                            exit(EXIT_FAILURE);
-                            break;
-                        case 0:
-                            execlp("./taxi", "taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
-                            printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
-                            exit(EXIT_FAILURE);
-                            break;
-                        default:
-                            break;
+                    case -1:
+                        printf("Error while trying to fork()! %s\n", strerror(errno));
+                        exit(EXIT_FAILURE);
+                        break;
+                    case 0:
+                        execlp("./taxi", "taxi", SO_TIMEOUT_PARAM, SO_DURATION_PARAM, NULL);
+                        printf("Error loading new program (taxi)%s!\n\n", strerror(errno));
+                        exit(EXIT_FAILURE);
+                        break;
+                    default:
+                        break;
                     }
                 }
             }
@@ -295,7 +283,7 @@ int main(int argc, char *argv[])
         aggiornaStatistiche(mappa, map_stats, queue_id); /*procedo ad aggiornare le statistiche*/
 
         if (print_with_ascii) /*se ho lo schermo piccolo stampo una versione più compatta dell'output*/
-        { 
+        {
             stampaStatisticheAscii(mappa, map_stats, FALSE, SO_TOP_CELLS, running_time);
         }
         else
@@ -307,7 +295,7 @@ int main(int argc, char *argv[])
     }
 
     aggiornaStatistiche(mappa, map_stats, queue_id); /*aggiorno le statistiche della simulazione un ultima volta per la stampa finale*/
-   
+
     searchForTopCells(mappa, SO_TOP_CELLS); /*cerco e marco le SO_TOP_CELL*/
 
     if (print_with_ascii) /*procedo alla tampa finale della simulazione*/
@@ -323,13 +311,24 @@ int main(int argc, char *argv[])
     for (i = 0; i < SO_TAXI; i++)
     {
         kill(child_taxi_created[i], SIGKILL);
-        waitpid(child_taxi_created[i], &trash_kill_signal);
+
+        /*required because apple decided that waitpid is differen -.- from linux*/
+        #ifdef __APPLE__  
+             waitpid(child_taxi_created[i], &trash_kill_signal, 0);
+        #else 
+            waitpid(child_taxi_created[i], &trash_kill_signal);
+        #endif
     }
 
     for (i = 0; i < SO_SOURCES; i++)
     {
         kill(child_source_created[i], SIGINT);
-        waitpid(child_source_created[i], &trash_kill_signal);
+         /*required because apple decided that waitpid is differen -.- from linux*/
+        #ifdef __APPLE__
+             waitpid(child_taxi_created[i], &trash_kill_signal, 0);
+        #else
+            waitpid(child_taxi_created[i], &trash_kill_signal);
+        #endif
     }
 
     /*
@@ -341,8 +340,7 @@ int main(int argc, char *argv[])
         for (j = 0; j < SO_WIDTH; j++)
         {
             semctl(mappa->matrice[i][j].availableSpace, 0, IPC_RMID, 0); /*rimuovo i semafori*/
-            semctl(mappa->matrice[i][j].mutex, j, IPC_RMID, 0); /*rimuovo i semafori*/
-
+            semctl(mappa->matrice[i][j].mutex, j, IPC_RMID, 0);          /*rimuovo i semafori*/
         }
     }
     free(child_source_created);
@@ -363,7 +361,7 @@ void spawnBlocks(struct grigliaCitta *mappa, int SO_HOLES)
 {
     int k, q; /*Variabili usate per ciclare*/
     int numero_buchi = 0;
-    
+
     for (k = 0; k < SO_HEIGHT; k++) /*inizializzo il tipo di ogni cella della tabella ROAD e marco come 1(inteso come la variabile booleana TRUE) la disponibilita' di ospitare un buco*/
     {
         for (q = 0; q < SO_WIDTH; q++)
@@ -373,12 +371,12 @@ void spawnBlocks(struct grigliaCitta *mappa, int SO_HOLES)
         }
     }
 
-    while (numero_buchi < SO_HOLES)    /*Ciclo fino a quando non ho posizionato tutti i buchi richiesti*/
+    while (numero_buchi < SO_HOLES) /*Ciclo fino a quando non ho posizionato tutti i buchi richiesti*/
     {
         /*Randomizzo le coordinate della cella che voglio far diventare buco*/
         k = rand() % SO_HEIGHT;
         q = rand() % SO_WIDTH;
-        if (mappa->matrice[k][q].availableForHoles == 1)  /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
+        if (mappa->matrice[k][q].availableForHoles == 1) /*La cella con le coordinate ottenute randomicamente vengono segnate come BLOCK*/
         {
             mappa->matrice[k][q].cellType = BLOCK;
             mappa->matrice[k][q].availableForHoles = 0;
@@ -386,38 +384,38 @@ void spawnBlocks(struct grigliaCitta *mappa, int SO_HOLES)
             /*La cella su cui posiziono il buco non potra' contenere altri buchi e nemmeno le 8 celle che ha intorno potranno. marco quindi come inutilizzabili per contenere buchi le celle intorno alla cella su cui ho posizionato il buco*/
             if (k > 0)
             {
-                if (q > 0)/*Cella in alto a sinistra*/
-                {       
+                if (q > 0) /*Cella in alto a sinistra*/
+                {
                     mappa->matrice[k - 1][q - 1].availableForHoles = 0;
                 }
-                mappa->matrice[k - 1][q].availableForHoles = 0;  /*Cella in alto centrale*/
-                if (q < SO_WIDTH - 1) /*Cella in alto a destra*/
-                {       
+                mappa->matrice[k - 1][q].availableForHoles = 0; /*Cella in alto centrale*/
+                if (q < SO_WIDTH - 1)                           /*Cella in alto a destra*/
+                {
                     mappa->matrice[k - 1][q + 1].availableForHoles = 0;
                 }
             }
             if (q > 0) /*Cella centrale a sinistra*/
-            {   
+            {
                 mappa->matrice[k][q - 1].availableForHoles = 0;
             }
-             /*Per la cella centrale non ho bisogno di un ulteriore controllo perche' e' la cella su cui siamo presenti ora*/
-            if (q < SO_WIDTH - 1)/*Cella centrale a destra*/
-            {   
+            /*Per la cella centrale non ho bisogno di un ulteriore controllo perche' e' la cella su cui siamo presenti ora*/
+            if (q < SO_WIDTH - 1) /*Cella centrale a destra*/
+            {
                 mappa->matrice[k][q + 1].availableForHoles = 0;
             }
             if (k < SO_HEIGHT - 1)
             {
-                if (q > 0)  /*Cella in basso a sinistra*/
-                {     
+                if (q > 0) /*Cella in basso a sinistra*/
+                {
                     mappa->matrice[k + 1][q - 1].availableForHoles = 0;
                 }
                 mappa->matrice[k + 1][q].availableForHoles = 0; /*Cella in basso centrale*/
-                if (q < SO_WIDTH - 1)  /*Cella in basso a destra*/
-                {     
+                if (q < SO_WIDTH - 1)                           /*Cella in basso a destra*/
+                {
                     mappa->matrice[k + 1][q + 1].availableForHoles = 0;
                 }
             }
-    
+
             numero_buchi++; /*Se il buco e' stato posizionato allora incremento, altrimenti non ho trovato una posizione valida, continuo il ciclo*/
         }
     }
@@ -426,13 +424,13 @@ void spawnBlocks(struct grigliaCitta *mappa, int SO_HOLES)
 void spawnSources(struct grigliaCitta *mappa, int SO_SOURCES)
 {
     int numero_sources = 0; /*variabile per tenere conto di quante Sources sono state piazzate nella mappa*/
-    int n, l; /*variabili che determinano il posizionamento nella griglia*/
+    int n, l;               /*variabili che determinano il posizionamento nella griglia*/
 
     while (numero_sources < SO_SOURCES) /*La Source puo' essere posizionata solamente in celle della griglia che prima erano ROAD, un BLOCK non puo' diventare ROAD*/
     {
-        n = rand() % SO_HEIGHT;  /*Assegno alle variabili n ed l un numero random che serve per posizionarmi sulla griglia*/
+        n = rand() % SO_HEIGHT; /*Assegno alle variabili n ed l un numero random che serve per posizionarmi sulla griglia*/
         l = rand() % SO_WIDTH;
-        
+
         if (mappa->matrice[n][l].cellType == ROAD) /*Se la cella che mi e' capitata e' di tipo ROAD allora posiziono la SOURCE e incremento il numero di SOURCE posizionate*/
         {
             mappa->matrice[n][l].cellType = SOURCE;
@@ -446,7 +444,7 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 {
     int screen_height, screen_width;
     char buffer_temp[1024]; /*buffer temporaneo per lettura dei parametri da tastiera*/
-    char tmp_char; /*per leggere eventuali input non desiderati*/
+    char tmp_char;          /*per leggere eventuali input non desiderati*/
 
     struct winsize size; /*struttura per ottenere la dimensione della finestra (api POSIX)... advanced programming for unix pagina 711. la uso per sapere se devo o meno stampare con asci o con int*/
 
@@ -454,129 +452,135 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
 
     if (argc == 11) /*1 nome comando + 10 parametri. se ho tutti i parametri allora procedo a assegnarli e a continuare l'esecuzione*/
     {
-        *SO_TAXI = abs(atoi(argv[1])); 
+        *SO_TAXI = abs(atoi(argv[1]));
         *SO_SOURCES = abs(atoi(argv[2]));
-        *SO_HOLES =  abs(atoi(argv[3]));
-        *SO_CAP_MIN =  abs(atoi(argv[4]));
-        *SO_CAP_MAX =  abs(atoi(argv[5]));
-        *SO_TIMENSEC_MIN =  abs(atoi(argv[6]));
-        *SO_TIMENSEC_MAX =  abs(atoi(argv[7]));
-        *SO_TOP_CELLS =  abs(atoi(argv[8]));
-        *SO_TIMEOUT =  abs(atoi(argv[9]));
+        *SO_HOLES = abs(atoi(argv[3]));
+        *SO_CAP_MIN = abs(atoi(argv[4]));
+        *SO_CAP_MAX = abs(atoi(argv[5]));
+        *SO_TIMENSEC_MIN = abs(atoi(argv[6]));
+        *SO_TIMENSEC_MAX = abs(atoi(argv[7]));
+        *SO_TOP_CELLS = abs(atoi(argv[8]));
+        *SO_TIMEOUT = abs(atoi(argv[9]));
         *SO_DURATION = abs(atoi(argv[10]));
 
-        if(*SO_SOURCES > SO_WIDTH * SO_HEIGHT)
+        if (*SO_SOURCES > SO_WIDTH * SO_HEIGHT)
         {
             printf("Error: Too many sources! try again...\n");
             exit(EXIT_FAILURE);
         }
 
-        if(*SO_HOLES > SO_WIDTH * SO_HEIGHT - *SO_SOURCES)
+        if (*SO_HOLES > SO_WIDTH * SO_HEIGHT - *SO_SOURCES)
         {
             printf("Error: Too many holes! try again...\n");
             exit(EXIT_FAILURE);
         }
 
-        if(*SO_TOP_CELLS > SO_WIDTH*SO_HEIGHT - *SO_HOLES - *SO_SOURCES){
+        if (*SO_TOP_CELLS > SO_WIDTH * SO_HEIGHT - *SO_HOLES - *SO_SOURCES)
+        {
             printf("Error: Too many SO_TOP_CELLS! Try again...\n");
             exit(EXIT_FAILURE);
         }
 
-        if(*SO_DURATION < 2){
+        if (*SO_DURATION < 2)
+        {
             printf("Error: SO_DURATION is too small! Try again...\n");
             exit(EXIT_FAILURE);
         }
-
-
     }
     else /*se il numero di parametri non è corretto proseguo a prelevare i parametri da stdin*/
     {
         printf("Insert number of taxi available for the simulation: ");
-        fgets(buffer_temp, 20, stdin); /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non fidandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
+        fgets(buffer_temp, 20, stdin);     /*leggo il testo inserito nello stdin un intero ha al massimo 10 simboli ma non fidandomi nell'utente dico che ne leggo al massimo 20 (inclus il \n alla fine)*/
         *SO_TAXI = abs(atoi(buffer_temp)); /*converto da stringa a intero*/
 
-        do {    /*in questo caso devo assicurarmi la correttezza del valore, percui, procedo a controllare che sia giusto e se sbagliato richiedo il valore. le linee di codice successive hanno lo stesso stile percui non vengono commentate*/
-            printf("Insert number of sources available for the simulation(MAX = %d): ", SO_WIDTH *SO_HEIGHT);
-            fgets(buffer_temp, 20, stdin); 
-            *SO_SOURCES = atoi(buffer_temp); 
-            if (*SO_SOURCES >= SO_WIDTH *SO_HEIGHT)
+        do
+        { /*in questo caso devo assicurarmi la correttezza del valore, percui, procedo a controllare che sia giusto e se sbagliato richiedo il valore. le linee di codice successive hanno lo stesso stile percui non vengono commentate*/
+            printf("Insert number of sources available for the simulation(MAX = %d): ", SO_WIDTH * SO_HEIGHT);
+            fgets(buffer_temp, 20, stdin);
+            *SO_SOURCES = atoi(buffer_temp);
+            if (*SO_SOURCES >= SO_WIDTH * SO_HEIGHT)
             {
                 colorPrintf("Insert again the number of SOURCES. Too many!!\n", RED, DEFAULT);
             }
-        } while (*SO_SOURCES >= SO_WIDTH *SO_HEIGHT);
+        } while (*SO_SOURCES >= SO_WIDTH * SO_HEIGHT);
 
-
-        do {    
+        do
+        {
             printf("Insert number of holes available for the simulation: ");
-            fgets(buffer_temp, 20, stdin); 
-            *SO_HOLES = abs(atoi(buffer_temp)); 
-            if (*SO_HOLES > (SO_WIDTH *SO_HEIGHT - *SO_SOURCES))
+            fgets(buffer_temp, 20, stdin);
+            *SO_HOLES = abs(atoi(buffer_temp));
+            if (*SO_HOLES > (SO_WIDTH * SO_HEIGHT - *SO_SOURCES))
             {
                 colorPrintf("Insert again the number of HOLES. Too many holes.\n", RED, DEFAULT);
             }
-        } while (*SO_HOLES > (SO_WIDTH *SO_HEIGHT - *SO_SOURCES));
+        } while (*SO_HOLES > (SO_WIDTH * SO_HEIGHT - *SO_SOURCES));
 
         printf("Insert minimum capacity for each cell: ");
         fgets(buffer_temp, 20, stdin);
-        *SO_CAP_MIN = abs(atoi(buffer_temp)); 
+        *SO_CAP_MIN = abs(atoi(buffer_temp));
 
         printf("Insert maximum capacity for each cell: ");
         fgets(buffer_temp, 20, stdin);
-        *SO_CAP_MAX = atoi(buffer_temp); 
+        *SO_CAP_MAX = atoi(buffer_temp);
 
-        if(*SO_CAP_MIN >= *SO_CAP_MAX) colorPrintf("Notice: SO_CAPACITY will be set to SO_CAP_MIN\n", YELLOW, DEFAULT); /*se ho il valore di max, minore uguale a min allora avviso che il numero della capacità non sarà random ma verrà impostato a SO_CAP_MIN*/
+        if (*SO_CAP_MIN >= *SO_CAP_MAX)
+            colorPrintf("Notice: SO_CAPACITY will be set to SO_CAP_MIN\n", YELLOW, DEFAULT); /*se ho il valore di max, minore uguale a min allora avviso che il numero della capacità non sarà random ma verrà impostato a SO_CAP_MIN*/
 
         printf("Insert minimum crossing time for each cell (nanoseconds - max: 999999999): ");
-        fgets(buffer_temp, 20, stdin); 
-        *SO_TIMENSEC_MIN = atoi(buffer_temp); 
+        fgets(buffer_temp, 20, stdin);
+        *SO_TIMENSEC_MIN = atoi(buffer_temp);
 
         printf("Insert maximum crossing time for each cell (nanoseconds - max: 999999999): ");
-        fgets(buffer_temp, 20, stdin); 
-        *SO_TIMENSEC_MAX = atoi(buffer_temp); 
+        fgets(buffer_temp, 20, stdin);
+        *SO_TIMENSEC_MAX = atoi(buffer_temp);
 
-        if(*SO_TIMENSEC_MIN >= *SO_TIMENSEC_MAX) colorPrintf("Notice: SO_TIMENSEC will be set to SO_TIMENSEC_MIN\n", YELLOW, DEFAULT);
+        if (*SO_TIMENSEC_MIN >= *SO_TIMENSEC_MAX)
+            colorPrintf("Notice: SO_TIMENSEC will be set to SO_TIMENSEC_MIN\n", YELLOW, DEFAULT);
 
-        do {    
+        do
+        {
             printf("Insert number of top cells to be shown at the end of the simulation: ");
-            fgets(buffer_temp, 20, stdin); 
-            *SO_TOP_CELLS = atoi(buffer_temp); 
-            if (*SO_TOP_CELLS >= SO_WIDTH *SO_HEIGHT - *SO_HOLES)
+            fgets(buffer_temp, 20, stdin);
+            *SO_TOP_CELLS = atoi(buffer_temp);
+            if (*SO_TOP_CELLS >= SO_WIDTH * SO_HEIGHT - *SO_HOLES)
             {
                 printf("Insert again the number of SO_TOP_CELLS. Too many!!\n");
             }
-        } while (*SO_TOP_CELLS >= SO_WIDTH *SO_HEIGHT - *SO_HOLES);
-
+        } while (*SO_TOP_CELLS >= SO_WIDTH * SO_HEIGHT - *SO_HOLES);
 
         printf("Insert taxi move timeout (milliseconds): ");
-        fgets(buffer_temp, 20, stdin); 
+        fgets(buffer_temp, 20, stdin);
         *SO_TIMEOUT = atoi(buffer_temp);
 
         /*La smulazione deve durare almeno due secondi per via di un problema in cui eseguiamo un operazione di modulo, e si rischia di avere x%0 se la simulazione dura 1 secondo */
-        do {    
+        do
+        {
             printf("Insert simulation duration (seconds >= 2): ");
-            fgets(buffer_temp, 20, stdin); 
+            fgets(buffer_temp, 20, stdin);
             *SO_DURATION = abs(atoi(buffer_temp));
             if (*SO_DURATION < 2)
             {
                 printf("Insert again the number SO_DURATION value. Too small!!\n");
             }
-        } while (*SO_DURATION < 2); 
-
+        } while (*SO_DURATION < 2);
     }
 
     /*calcolo la dimensione ottimale per potere avere la migliore esperienza*/
 
-    if (SO_HEIGHT + 4 < 14) screen_height = 14; /*se la dimensione della tabella è 9, diventa 13 (con 2 extra sopra e 2 extra sotto*/
-    else screen_height = SO_HEIGHT + 4;
+    if (SO_HEIGHT + 4 < 14)
+        screen_height = 14; /*se la dimensione della tabella è 9, diventa 13 (con 2 extra sopra e 2 extra sotto*/
+    else
+        screen_height = SO_HEIGHT + 4;
 
-    screen_width = 4 *(2 + SO_WIDTH) + 55; /*lunghezza della singola cella per la dimenzione della mappa piu la len max delle stat*/
+    screen_width = 4 * (2 + SO_WIDTH) + 55; /*lunghezza della singola cella per la dimenzione della mappa piu la len max delle stat*/
 
     /*stampo un riepilogo dei parametri di esecuzione della simulazione*/
     printf("Simulation will now start with thw following parameters:\n\n\tSO_TAXI: %d\n\tSO_SOURCES: %d\n\tSO_HOLES: %d\n\tSO_CAP_MIN: %d\n\tSO_CAP_MAX: %d\n\tSO_TIMENSEC_MIN: %d\n\tSO_TIMENSEC_MAX: %d\n\tSO_TOP_CELLS: %d\n\tSO_TIMEOUT: %d\n\tSO_DURATION: %d\n\n%s For a better experience, a terminal with minimum %d char width and minimum %d character height is required %s\n\nAre you ok with the following parameters? (y/n, Default:y): ", *SO_TAXI, *SO_SOURCES, *SO_HOLES, *SO_CAP_MIN, *SO_CAP_MAX, *SO_TIMENSEC_MIN, *SO_TIMENSEC_MAX, *SO_TOP_CELLS, *SO_TIMEOUT, *SO_DURATION, C_YELLOW, screen_width, screen_height, C_DEFAULT);
     tmp_char = getc(stdin); /*leggo input per potere avviare simulazione, prima assicurandomi che la dimensione del terminale sia mantenuta delle dimansioni buone*/
-    getc(stdin); /*pulisto da eventuali 7n che rompono le scatole*/
+    getc(stdin);            /*pulisto da eventuali 7n che rompono le scatole*/
     /*verifico che la scelta sia negativa e se lo è riavvio la richiesta dei dati... con argc però a zero per farti modificare i numeri!*/
-    if (tmp_char == 'n' || tmp_char == 'N') setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION, 0, argv, print_with_ascii);
+    if (tmp_char == 'n' || tmp_char == 'N')
+        setupSimulation(SO_TAXI, SO_SOURCES, SO_HOLES, SO_CAP_MIN, SO_CAP_MAX, SO_TIMENSEC_MIN, SO_TIMENSEC_MAX, SO_TOP_CELLS, SO_TIMEOUT, SO_DURATION, 0, argv, print_with_ascii);
 
     if (screen_width > size.ws_col) /*se ho una dimensione dello schermo minore della dimensione raccomandata, chiedo se voglio avere una stampa in formato più compatto*/
     {
@@ -584,23 +588,24 @@ void setupSimulation(int *SO_TAXI, int *SO_SOURCES, int *SO_HOLES, int *SO_CAP_M
         printf(" screen size width might be too small to fit a beautified output version... would you like to print a more compact rappresentation? (y/n - default: n): ");
         tmp_char = getc(stdin);
         getc(stdin); /*tolgo lo \n che senno fa partire subito la simulazione*/
-        if (tmp_char == 'y') *print_with_ascii = TRUE;
-        else *print_with_ascii = FALSE;
+        if (tmp_char == 'y')
+            *print_with_ascii = TRUE;
+        else
+            *print_with_ascii = FALSE;
 
         printf("\nSimulation will now start. Press any key to begin....");
         getc(stdin);
     }
-
 }
 
 void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean final_print, int SO_TOP_CELLS, int running_time)
 {
     /*poichè questa funzione è identica alla stampastatisticheAscii si commenta solamente questa...*/
-    int i, j, k, printed_stats = 0,  row_count = 0; /*row_count serve a contare quante righe sto stampando...*/
+    int i, j, k, printed_stats = 0, row_count = 0; /*row_count serve a contare quante righe sto stampando...*/
 
-    char stats[13][128]; /*array di stringhe contententi il testo formattato della stampa delle statistiche*/
-    const int number_of_stats = 13; /*numero di linee di statistiche da stampare*/
-    char *strTmp = (char*) malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf.*/
+    char stats[13][128];              /*array di stringhe contententi il testo formattato della stampa delle statistiche*/
+    const int number_of_stats = 13;   /*numero di linee di statistiche da stampare*/
+    char *strTmp = (char *)malloc(7); /*dichiaro una str temporanea d usare nella sprintf per poi passarla alla colorPrintf.*/
 
     struct winsize size; /*struttura per ottenere la dimensione della finestra... advanced programming for unix pae 711*/
 
@@ -610,8 +615,10 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
     sprintf(stats[1], "%s%d", " | Number of successful rides: ", statistiche[0]);
 
-    if (!final_print) sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]); /*Faccio la differenziazione: il numero di corse unsuccesful sono il numero di corse che sono rimmaste nella coda a fine della simulazione*/
-    else sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
+    if (!final_print)
+        sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]); /*Faccio la differenziazione: il numero di corse unsuccesful sono il numero di corse che sono rimmaste nella coda a fine della simulazione*/
+    else
+        sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
 
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
@@ -631,14 +638,15 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
         for (i = 0; i < SO_WIDTH + 1; i++)
         {
             sprintf(strTmp, "%-4d", i);
-            if (k > 0 && i < SO_WIDTH) colorPrintf(strTmp, RED, GRAY);
-            else colorPrintf("    ", GRAY, GRAY);
+            if (k > 0 && i < SO_WIDTH)
+                colorPrintf(strTmp, RED, GRAY);
+            else
+                colorPrintf("    ", GRAY, GRAY);
         }
         printf("%s\n", stats[printed_stats]);
     }
 
-
-    for (i = 0; i < SO_HEIGHT; i++, row_count++)/*stampo il corpo della mappa*/
+    for (i = 0; i < SO_HEIGHT; i++, row_count++) /*stampo il corpo della mappa*/
     {
         sprintf(strTmp, "%3d ", i);
         colorPrintf(strTmp, RED, GRAY); /*stampo bordo laterale sx*/
@@ -649,7 +657,7 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
             V(mappa->matrice[i][j].mutex);
 
             if (mappa->matrice[i][j].cellType == ROAD)
-            {   /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
+            { /*se sono alla stampa finale e sono in una SO_TOP_CELL allora vado a mostrare i vari colori nelle celle altrimenti mostro solo l'occupazione...*/
                 if ((final_print == TRUE) && (mappa->matrice[i][j].isInTopSoCell == TRUE))
                 {
                     colorPrintf(strTmp, BLACK, YELLOW);
@@ -664,11 +672,11 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
                 if ((final_print == TRUE) && (mappa->matrice[i][j].isInTopSoCell == TRUE))
                 {
                     colorPrintf(strTmp, MAGENTA, YELLOW);
-                } 
+                }
                 else
                 {
                     colorPrintf(strTmp, BLACK, MAGENTA);
-                } 
+                }
             }
             else /*se è una strada di tipo block*/
             {
@@ -688,9 +696,10 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
         }
     }
 
-    for (k = 0; k < 2; k++, row_count++)/*stampo bordo inferiore*/
+    for (k = 0; k < 2; k++, row_count++) /*stampo bordo inferiore*/
     {
-        for (i = 0; i < SO_WIDTH + 2; i++) colorPrintf("    ", GRAY, GRAY);
+        for (i = 0; i < SO_WIDTH + 2; i++)
+            colorPrintf("    ", GRAY, GRAY);
         if (printed_stats < number_of_stats)
         { /*stampo statistica a financo banda grigia*/
             printf("%s\n", stats[printed_stats]);
@@ -706,18 +715,21 @@ void stampaStatistiche(struct grigliaCitta *mappa, int *statistiche, boolean fin
     {
         for (i = printed_stats; i < number_of_stats; i++, row_count++)
         {
-            for (j = 0; j < 7 *(SO_WIDTH + 2); j++) printf(" ");
+            for (j = 0; j < 7 * (SO_WIDTH + 2); j++)
+                printf(" ");
             printf("%s\n", stats[i]);
         }
     }
 
-    if (final_print == TRUE)/*vado a stampare tanti \n in modo da fare sembrare che la pagina si stia aggiornando in continuazione... se sono alla final print ne stampo meno...*/
+    if (final_print == TRUE) /*vado a stampare tanti \n in modo da fare sembrare che la pagina si stia aggiornando in continuazione... se sono alla final print ne stampo meno...*/
     {
-        for (i = 0; i < (size.ws_row - row_count - 3); i++) printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
+        for (i = 0; i < (size.ws_row - row_count - 3); i++)
+            printf("\n"); /*stampo tanti \n fino ad ottenere di avere la finestra completamente pulita...*/
     }
     else
     {
-        for (i = 0; i < (size.ws_row - row_count - 1); i++) printf("\n");
+        for (i = 0; i < (size.ws_row - row_count - 1); i++)
+            printf("\n");
     }
 
     free(strTmp); /*dealloco strTmp*/
@@ -729,17 +741,19 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
 
     char stats[12][128];
     const int number_of_stats = 12;
-    char *strTmp = (char*) malloc(7);
+    char *strTmp = (char *)malloc(7);
 
-    struct winsize size; 
+    struct winsize size;
 
-    ioctl(STDIN_FILENO, TIOCGWINSZ, &size); 
+    ioctl(STDIN_FILENO, TIOCGWINSZ, &size);
 
     sprintf(stats[0], "%s", " |\033[33m Statistics for running simulation \033[39m");
     sprintf(stats[1], "%s%d", " | Number of successful rides: ", statistiche[0]);
 
-    if (!final_print) sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]);
-    else sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
+    if (!final_print)
+        sprintf(stats[2], "%s%d", " | Number of pending rides: ", statistiche[1]);
+    else
+        sprintf(stats[2], "%s%d", " | Number of unsuccessful rides: ", statistiche[1]);
 
     sprintf(stats[3], "%s%d", " | Number of aborted rides: ", statistiche[2]);
     sprintf(stats[4], "%s%d", " | Cumulative longest driving taxi: ", statistiche[3]);
@@ -764,16 +778,16 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
     for (i = 0; i < SO_HEIGHT; i++, row_count++)
     {
         sprintf(strTmp, "%-4d", i);
-        colorPrintf(strTmp, RED, DEFAULT); 
+        colorPrintf(strTmp, RED, DEFAULT);
         for (j = 0; j < SO_WIDTH; j++)
         {
 
             P(mappa->matrice[i][j].mutex);
-            sprintf(strTmp, "%-4d", mappa->matrice[i][j].taxiOnThisCell); 
+            sprintf(strTmp, "%-4d", mappa->matrice[i][j].taxiOnThisCell);
             V(mappa->matrice[i][j].mutex);
 
             if (mappa->matrice[i][j].cellType == ROAD)
-            {   
+            {
                 if ((final_print == TRUE) && (mappa->matrice[i][j].isInTopSoCell == TRUE))
                 {
                     colorPrintf(strTmp, BLACK, YELLOW);
@@ -781,7 +795,7 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
                 else
                 {
                     printf("%s", strTmp);
-                } 
+                }
             }
             else if (mappa->matrice[i][j].cellType == SOURCE)
             {
@@ -792,7 +806,7 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
                 else
                 {
                     colorPrintf(strTmp, BLACK, MAGENTA);
-                } 
+                }
             }
             else
             {
@@ -809,11 +823,13 @@ void stampaStatisticheAscii(struct grigliaCitta *mappa, int *statistiche, boolea
     }
     if (final_print == TRUE)
     {
-        for (i = 0; i < (size.ws_row - row_count - 4); i++) printf("\n"); 
+        for (i = 0; i < (size.ws_row - row_count - 4); i++)
+            printf("\n");
     }
     else
     {
-        for (i = 0; i < (size.ws_row - row_count - 2); i++) printf("\n");
+        for (i = 0; i < (size.ws_row - row_count - 2); i++)
+            printf("\n");
     }
     free(strTmp);
 }
@@ -831,12 +847,12 @@ void signalHandler(int signal)
 {
     switch (signal)
     {
-        case SIGALRM: /*se ricevo un sigalarm, risveglio il processo e dico che devo uscire dal loop principale*/
-            exit_from_program = TRUE;
-            break;
+    case SIGALRM: /*se ricevo un sigalarm, risveglio il processo e dico che devo uscire dal loop principale*/
+        exit_from_program = TRUE;
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
@@ -882,32 +898,31 @@ void initMap(struct grigliaCitta *mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_
     int i, j;
     int tmp;
 
-    spawnBlocks(mappa, SO_HOLES); /*creo le celle di tipo block*/
+    spawnBlocks(mappa, SO_HOLES);    /*creo le celle di tipo block*/
     spawnSources(mappa, SO_SOURCES); /*creo le celle di tipo source*/
 
     /*procedo a inizializare tutte le celle della mia mappa*/
     for (i = 0; i < SO_HEIGHT; i++)
     {
         for (j = 0; j < SO_WIDTH; j++)
-        { 
+        {
 
-                do {    
-                    tmp = (mappa->matrice[i][j].availableSpace = semget(IPC_PRIVATE, 1, 0666)); /*Ottengo un semaforo che indichi la quantità di posti disponibili sulla cella. è semaforo di tipo contatore. lo faccio fino a che il valore della cella è == -1 (non ho un semaforo valido)*/
-                } while (tmp == -1); /*aspetto che il semaforo sia allocato*/
-                
-                tmp = -1;
+            do
+            {
+                tmp = (mappa->matrice[i][j].availableSpace = semget(IPC_PRIVATE, 1, 0666)); /*Ottengo un semaforo che indichi la quantità di posti disponibili sulla cella. è semaforo di tipo contatore. lo faccio fino a che il valore della cella è == -1 (non ho un semaforo valido)*/
+            } while (tmp == -1);                                                            /*aspetto che il semaforo sia allocato*/
 
-                do {    
-                    tmp = (mappa->matrice[i][j].mutex = semget(IPC_PRIVATE, 1, 0666)); /*come sopra ma ottengo un semaforo per il mutex*/
-                } while (tmp == -1); /*aspetto che il semaforo sia allocato*/
+            tmp = -1;
 
-                
-                semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
+            do
+            {
+                tmp = (mappa->matrice[i][j].mutex = semget(IPC_PRIVATE, 1, 0666)); /*come sopra ma ottengo un semaforo per il mutex*/
+            } while (tmp == -1);                                                   /*aspetto che il semaforo sia allocato*/
 
+            semctl(mappa->matrice[i][j].mutex, 0, SETVAL, 1); /*imposto mutex a 1*/
 
-           
-            if (SO_CAP_MAX > SO_CAP_MIN)  /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max<min. Inoltre così o la possibilità di forzare un valore di una cella a quello che voglio*/
-            {  
+            if (SO_CAP_MAX > SO_CAP_MIN) /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max<min. Inoltre così o la possibilità di forzare un valore di una cella a quello che voglio*/
+            {
                 semctl(mappa->matrice[i][j].availableSpace, 0, SETVAL, SO_CAP_MIN + (rand() % (SO_CAP_MAX - SO_CAP_MIN))); /*imposto il valore random compreso tra i due estremi*/
             }
             else
@@ -920,20 +935,21 @@ void initMap(struct grigliaCitta *mappa, int SO_CAP_MIN, int SO_CAP_MAX, int SO_
             mappa->matrice[i][j].totalNumberOfTaxiPassedHere = 0;
 
             if (SO_TIMENSEC_MAX > SO_TIMENSEC_MIN) /*con questo evito errori di divisioni per 0. metto > per evitare casi in cui max<min. Inoltre così o la possibilità di forzare un valore di una cella a quello che voglio*/
-            {   
+            {
                 mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN + (rand() % (SO_TIMENSEC_MAX - SO_TIMENSEC_MIN)); /*imposto il valore random compreso tra i due estremi*/
             }
             else
             {
                 mappa->matrice[i][j].timeRequiredToCrossCell = SO_TIMENSEC_MIN;
             }
-        
+
             mappa->matrice[i][j].isInTopSoCell = FALSE; /*La cella non è ancora in SO_TOP_CELLS*/
         }
     }
 
     /*Imposto valori della mappa e non della singola cella, tra cui il mutex per potere accedere a questi due valori*/
-    do {
+    do
+    {
         mappa->mutex = semget(IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | 0666);
     } while (tmp == -1); /*aspetto che il semaforo sia allocato*/
 
